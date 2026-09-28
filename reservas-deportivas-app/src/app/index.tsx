@@ -1,17 +1,179 @@
-import { Text, View, StyleSheet } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Espacio } from "@/tipos/espacio";
+import { Deporte } from "@/tipos/deporte";
+import { EstadoCarga } from "@/componentes/EstadoCarga";
+import { EstadoError } from "@/componentes/EstadoError";
+import { EstadoVacio } from "@/componentes/EstadoVacio";
+import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
+import { Buscador } from "@/componentes/Buscador";
+import { ChipDisciplina } from "@/componentes/ChipDisciplina";
+import { CardEspacio } from "@/componentes/CardEspacio";
+import { BotonCta } from "@/componentes/BotonCta";
+import { colores } from "@/constantes/colores";
+import { getEspacios } from "@/servicios/espacios";
+import { deportesMock } from "@/mocks/deportes";
 
-export default function Index() {
+export default function Home() {
+  const router = useRouter();
+
+  const [espacios, setEspacios] = useState<Espacio[]>([]);
+  const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const [deportes] = useState<Deporte[]>(deportesMock);
+  const [deporteSeleccionado, setDeporteSeleccionado] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+
+  const cargarEspacios = async () => {
+    setEstado("loading");
+    setError(null);
+
+    try {
+      const datos = await getEspacios();
+      setEspacios(datos);
+      setEstado("success");
+    } catch (e) {
+      setError("No se pudieron cargar los espacios. Intentá de nuevo.");
+      setEstado("error");
+    }
+  };
+
+  useEffect(() => {
+    cargarEspacios();
+  }, []);
+
+  const espaciosFiltrados = useMemo(() => {
+    return espacios.filter((espacio) => {
+      const coincideDeporte = deporteSeleccionado
+        ? espacio.deporteId === deporteSeleccionado
+        : true;
+
+      const termino = busqueda.trim().toLowerCase();
+      const coincideBusqueda = termino
+        ? espacio.nombre.toLowerCase().includes(termino) ||
+          espacio.complejo.toLowerCase().includes(termino)
+        : true;
+
+      return coincideDeporte && coincideBusqueda;
+    });
+  }, [espacios, deporteSeleccionado, busqueda]);
+
+  if (estado === "loading") {
+    return <EstadoCarga mensaje="Cargando espacios..." />;
+  }
+
+  if (estado === "error") {
+    return <EstadoError mensaje={error ?? "Ocurrió un error"} onReintentar={cargarEspacios} />;
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Reservas Deportivas</Text>
+    <View style={estilos.contenedor}>
+      <HeaderInstitucional onPerfilPress={() => console.log("Ir a perfil")} />
+
+      <ScrollView
+        style={estilos.scroll}
+        contentContainerStyle={estilos.contenidoScroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <Buscador valor={busqueda} onChangeText={setBusqueda} />
+
+        <Text style={estilos.tituloSeccion}>Filtrar por deporte</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={estilos.chips}
+        >
+          <ChipDisciplina
+            deporte={{ id: "todos", nombre: "Todos", icono: "apps-outline", color: colores.verdePrincipal }}
+            seleccionado={deporteSeleccionado === null}
+            onPress={() => setDeporteSeleccionado(null)}
+          />
+          {deportes.map((deporte) => (
+            <ChipDisciplina
+              key={deporte.id}
+              deporte={deporte}
+              seleccionado={deporteSeleccionado === deporte.id}
+              onPress={() => setDeporteSeleccionado(deporte.id)}
+            />
+          ))}
+        </ScrollView>
+
+        <Pressable
+          style={estilos.bloqueMapa}
+          onPress={() => router.push("/mapa")}
+        >
+          <Text style={estilos.tituloMapa}>Ver todos en el mapa</Text>
+          <Text style={estilos.subtituloMapa}>Encontrá los espacios deportivos de Villaguay</Text>
+        </Pressable>
+
+        <Text style={estilos.tituloSeccion}>Espacios disponibles</Text>
+
+        {espaciosFiltrados.length === 0 ? (
+          <EstadoVacio mensaje="No se encontraron espacios con ese filtro." />
+        ) : (
+          <FlatList
+            data={espaciosFiltrados}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <CardEspacio
+                espacio={item}
+                onVerDisponibilidad={() => router.push({ pathname: "/espacio/[id]", params: { id: item.id } })}
+              />
+            )}
+          />
+        )}
+      </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const estilos = StyleSheet.create({
+  contenedor: {
+    backgroundColor: colores.fondo,
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+  },
+  scroll: {
+    flex: 1,
+  },
+  contenidoScroll: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  tituloSeccion: {
+    color: colores.textoOscuro,
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    marginTop: 20,
+  },
+  chips: {
+    paddingBottom: 4,
+  },
+  bloqueMapa: {
+    backgroundColor: colores.verdePrincipal,
+    borderRadius: 16,
+    marginTop: 20,
+    padding: 20,
+  },
+  tituloMapa: {
+    color: colores.blanco,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  subtituloMapa: {
+    color: colores.blanco,
+    fontSize: 13,
+    marginTop: 4,
+    opacity: 0.9,
   },
 });
