@@ -22,6 +22,8 @@ export function ChipDisciplina({ deporte, seleccionado, onPress }: ChipDisciplin
           estilos.texto,
           seleccionado && { color: colores.blanco },
         ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
       >
         {deporte.nombre}
       </Text>
@@ -38,12 +40,15 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "center",
     marginRight: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    maxWidth: 120,
+    minWidth: 88,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   texto: {
     color: colores.verdePrincipal,
     fontSize: 14,
     fontWeight: "500",
+    textAlign: "center",
   },
 });
