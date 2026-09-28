@@ -20,8 +20,8 @@ export function EstadoVacio({
 const estilos = StyleSheet.create({
   contenedor: {
     alignItems: "center",
-    flex: 1,
     justifyContent: "center",
+    minHeight: 180,
     padding: 24,
   },
   mensaje: {
