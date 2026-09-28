@@ -1,10 +1,10 @@
-import {espacios_mock} from "../mock/espacios";
-import {Espacio} from "../tipos/espacio";
+import {espaciosMock} from "@/mocks/espacios";
+import {Espacio} from "@/tipos/espacio";
 
 export const getEspacios = async (): Promise<Espacio[]> => {
     return new Promise((resolve) => {
         setTimeout(() => {
-            resolve(espacios_mock);
+            resolve(espaciosMock);
         }, 900);
     });
 };
@@ -12,7 +12,7 @@ export const getEspacios = async (): Promise<Espacio[]> => {
 export const getEspacioById = async (id: string): Promise<Espacio | null> => {
     return new Promise((resolve) => {
         setTimeout(() => {
-            const espacio = espacios_mock.find((e) => e.id === id);
+            const espacio = espaciosMock.find((e) => e.id === id);
             resolve(espacio || null);
         }, 900);
     });
