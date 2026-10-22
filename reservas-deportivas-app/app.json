@@ -35,7 +35,13 @@
       ],
       "@react-native-vector-icons/ionicons",
       "expo-image",
-      "expo-video"
+      "expo-video",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "La app usa tu ubicacion para mostrarte los espacios deportivos mas cercanos."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
