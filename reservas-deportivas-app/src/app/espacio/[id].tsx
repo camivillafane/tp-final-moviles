@@ -110,7 +110,7 @@ export default function DetalleEspacio() {
           <View style={estilos.seccion}>
             <BotonCta
               titulo="Ver disponibilidad"
-              onPress={() => console.log("Navegar a disponibilidad de", espacio.id)}
+              onPress={() => router.push({ pathname: "/disponibilidad/[id]", params: { id: espacio.id } })}
             />
           </View>
         </View>
