@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Dimensions,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -16,20 +16,22 @@ import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { BotonCta } from "@/componentes/BotonCta";
 import { colores } from "@/constantes/colores";
 import { getEspacios } from "@/servicios/espacios";
+import IonIcons from "@react-native-vector-icons/ionicons";
 
 const COORDENADAS_VILLAGUAY: Region = {
   latitude: -31.8642,
   longitude: -59.0281,
-  latitudeDelta: 0.03,
-  longitudeDelta: 0.03,
+  latitudeDelta: 0.035,
+  longitudeDelta: 0.035,
 };
 
 export default function Mapa() {
   const router = useRouter();
+  const mapRef = useRef<MapView>(null);
 
   const [espacios, setEspacios] = useState<Espacio[]>([]);
-  const [region, setRegion] = useState<Region | null>(null);
   const [espacioSeleccionado, setEspacioSeleccionado] = useState<Espacio | null>(null);
+  const [tienePermiso, setTienePermiso] = useState(false);
   const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -40,23 +42,8 @@ export default function Mapa() {
     setError(null);
 
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      let ubicacionUsuario: Location.LocationObject | null = null;
-
-      if (status === "granted") {
-        ubicacionUsuario = await Location.getCurrentPositionAsync({});
-      }
-
       const datos = await getEspacios();
       setEspacios(datos);
-
-      setRegion({
-        latitude: ubicacionUsuario?.coords.latitude ?? COORDENADAS_VILLAGUAY.latitude,
-        longitude: ubicacionUsuario?.coords.longitude ?? COORDENADAS_VILLAGUAY.longitude,
-        latitudeDelta: COORDENADAS_VILLAGUAY.latitudeDelta,
-        longitudeDelta: COORDENADAS_VILLAGUAY.longitudeDelta,
-      });
-
       setEstado("success");
     } catch (e) {
       setError("No se pudo cargar el mapa. Intentá de nuevo.");
@@ -67,6 +54,41 @@ export default function Mapa() {
   useEffect(() => {
     cargarMapa();
   }, []);
+
+  const centrarEnMiUbicacion = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        setTienePermiso(false);
+        Alert.alert(
+          "Permiso denegado",
+          "Necesitamos tu ubicación para centrar el mapa en vos. Podés activarlo desde los ajustes del sistema."
+        );
+        return;
+      }
+
+      setTienePermiso(true);
+
+      const posicion = await Location.getCurrentPositionAsync({});
+      const nuevaRegion: Region = {
+        latitude: posicion.coords.latitude,
+        longitude: posicion.coords.longitude,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      };
+
+      mapRef.current?.animateToRegion(nuevaRegion, 600);    } catch (e) {
+      Alert.alert(
+        "No se pudo obtener tu ubicación",
+        "Revisá que el GPS esté activado e intentá de nuevo."
+      );
+    }
+  };
+
+  const volverAVillaguay = () => {
+    mapRef.current?.animateToRegion(COORDENADAS_VILLAGUAY, 600);
+  };
 
   if (estado === "loading") {
     return <EstadoCarga mensaje="Cargando mapa..." />;
@@ -81,10 +103,11 @@ export default function Mapa() {
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
 
       <MapView
+        ref={mapRef}
         style={estilos.mapa}
-        initialRegion={region ?? COORDENADAS_VILLAGUAY}
-        showsUserLocation
-        showsMyLocationButton
+        initialRegion={COORDENADAS_VILLAGUAY}
+        showsUserLocation={tienePermiso}
+        showsMyLocationButton={false}
       >
         {espaciosActivos.map((espacio) => (
           <Marker
@@ -99,6 +122,15 @@ export default function Mapa() {
           />
         ))}
       </MapView>
+
+      <View style={estilos.controles}>
+        <Pressable style={estilos.botonControl} onPress={centrarEnMiUbicacion}>
+          <IonIcons name="locate" size={22} color={colores.verdePrincipal} />
+        </Pressable>
+        <Pressable style={estilos.botonControl} onPress={volverAVillaguay}>
+          <IonIcons name="home" size={22} color={colores.verdePrincipal} />
+        </Pressable>
+      </View>
 
       {espacioSeleccionado && (
         <View style={estilos.tarjeta}>
@@ -143,6 +175,28 @@ const estilos = StyleSheet.create({
   },
   mapa: {
     flex: 1,
+  },
+  controles: {
+    bottom: 24,
+    position: "absolute",
+    right: 16,
+    top: 16,
+  },
+  botonControl: {
+    alignItems: "center",
+    backgroundColor: colores.blanco,
+    borderColor: colores.borde,
+    borderRadius: 12,
+    borderWidth: 1,
+    elevation: 4,
+    height: 44,
+    justifyContent: "center",
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    width: 44,
   },
   tarjeta: {
     backgroundColor: colores.blanco,

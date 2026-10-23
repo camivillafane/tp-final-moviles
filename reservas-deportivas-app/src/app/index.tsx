@@ -16,6 +16,7 @@ import { EstadoVacio } from "@/componentes/EstadoVacio";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { Buscador } from "@/componentes/Buscador";
 import { ChipDisciplina } from "@/componentes/ChipDisciplina";
+import { ChipFiltro } from "@/componentes/ChipFiltro";
 import { CardEspacio } from "@/componentes/CardEspacio";
 import { BotonCta } from "@/componentes/BotonCta";
 import { colores } from "@/constantes/colores";
@@ -31,6 +32,7 @@ export default function Home() {
 
   const [deportes] = useState<Deporte[]>(deportesMock);
   const [deporteSeleccionado, setDeporteSeleccionado] = useState<string | null>(null);
+  const [complejoSeleccionado, setComplejoSeleccionado] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
 
   const cargarEspacios = async () => {
@@ -51,10 +53,18 @@ export default function Home() {
     cargarEspacios();
   }, []);
 
+  const complejos = useMemo(() => {
+    return Array.from(new Set(espacios.map((espacio) => espacio.complejo)));
+  }, [espacios]);
+
   const espaciosFiltrados = useMemo(() => {
     return espacios.filter((espacio) => {
       const coincideDeporte = deporteSeleccionado
         ? espacio.deporteId === deporteSeleccionado
+        : true;
+
+      const coincideComplejo = complejoSeleccionado
+        ? espacio.complejo === complejoSeleccionado
         : true;
 
       const termino = busqueda.trim().toLowerCase();
@@ -63,9 +73,9 @@ export default function Home() {
           espacio.complejo.toLowerCase().includes(termino)
         : true;
 
-      return coincideDeporte && coincideBusqueda;
+      return coincideDeporte && coincideComplejo && coincideBusqueda;
     });
-  }, [espacios, deporteSeleccionado, busqueda]);
+  }, [espacios, deporteSeleccionado, complejoSeleccionado, busqueda]);
 
   if (estado === "loading") {
     return <EstadoCarga mensaje="Cargando espacios..." />;
@@ -103,6 +113,27 @@ export default function Home() {
               deporte={deporte}
               seleccionado={deporteSeleccionado === deporte.id}
               onPress={() => setDeporteSeleccionado(deporte.id)}
+            />
+          ))}
+        </ScrollView>
+
+        <Text style={estilos.tituloSeccion}>Filtrar por complejo</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={estilos.chips}
+        >
+          <ChipFiltro
+            etiqueta="Todos"
+            seleccionado={complejoSeleccionado === null}
+            onPress={() => setComplejoSeleccionado(null)}
+          />
+          {complejos.map((complejo) => (
+            <ChipFiltro
+              key={complejo}
+              etiqueta={complejo}
+              seleccionado={complejoSeleccionado === complejo}
+              onPress={() => setComplejoSeleccionado(complejo)}
             />
           ))}
         </ScrollView>
