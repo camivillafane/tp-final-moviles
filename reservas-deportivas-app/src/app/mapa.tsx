@@ -78,7 +78,8 @@ export default function Mapa() {
         longitudeDelta: 0.02,
       };
 
-      mapRef.current?.animateToRegion(nuevaRegion, 600);    } catch (e) {
+      mapRef.current?.animateToRegion(nuevaRegion, 600);
+    } catch (e) {
       Alert.alert(
         "No se pudo obtener tu ubicación",
         "Revisá que el GPS esté activado e intentá de nuevo."
