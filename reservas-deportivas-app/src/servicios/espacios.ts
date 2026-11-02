@@ -1,38 +1,35 @@
-//import {espaciosMock} from "@/mocks/espacios";
 import axios from "axios";
-import {cliente} from "@/servicios/cliente";
-import {Espacio} from "@/tipos/espacio";
+import { cliente } from "./cliente";
+import { Espacio } from "@/tipos/espacio";
+import { espaciosMock } from "@/mocks/espacios";
+
+const USE_MOCKS: boolean = true; // ← false cuando exista el backend
+
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const getEspacios = async (): Promise<Espacio[]> => {
-    const {data} = await cliente.get<Espacio[]>("/espacios");
+  if (USE_MOCKS) {
+    await esperar(900);
+    return espaciosMock;
+  }
+
+  const { data } = await cliente.get<Espacio[]>("/espacios");
+  return data;
+};
+
+export const getEspacioById = async (id: string): Promise<Espacio | null> => {
+  if (USE_MOCKS) {
+    await esperar(900);
+    return espaciosMock.find((e) => e.id === id) ?? null;
+  }
+
+  try {
+    const { data } = await cliente.get<Espacio>(`/espacios/${id}`);
     return data;
-};
-
-export const getEspacioById = async (id: string): Promise<Espacio | null> => {
-    try {
-        const {data} = await cliente.get<Espacio>(`/espacios/${id}`);
-        return data;
-    } catch (error) {
-        if (axios.isAxiosError(error) && error.response?.status === 404) {
-            return null;
-        }
-        throw error;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
     }
-}
-
-/*export const getEspacios = async (): Promise<Espacio[]> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(espaciosMock);
-        }, 900);
-    });
+    throw error;
+  }
 };
-
-export const getEspacioById = async (id: string): Promise<Espacio | null> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const espacio = espaciosMock.find((e) => e.id === id);
-            resolve(espacio || null);
-        }, 900);
-    });
-}*/
