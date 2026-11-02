@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Pressable
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Espacio } from "@/tipos/espacio";
@@ -15,6 +16,7 @@ import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { BotonCta } from "@/componentes/BotonCta";
 import { colores } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
+import { deportesMock } from "@/mocks/deportes";
 
 export default function DetalleEspacio() {
   const router = useRouter();
@@ -67,6 +69,8 @@ export default function DetalleEspacio() {
     return <EstadoError mensaje="El espacio no existe." />;
   }
 
+  const deporte = deportesMock.find((d) => d.id === espacio?.deporteId);
+
   return (
     <View style={estilos.contenedor}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
@@ -84,6 +88,7 @@ export default function DetalleEspacio() {
 
         <View style={estilos.contenido}>
           <Text style={estilos.complejo}>{espacio.complejo}</Text>
+          <Text style={estilos.deporte}>{deporte?.nombre}</Text>
           <Text style={estilos.nombre}>{espacio.nombre}</Text>
 
           <View style={estilos.seccion}>
@@ -112,6 +117,9 @@ export default function DetalleEspacio() {
               titulo="Ver disponibilidad"
               onPress={() => router.push({ pathname: "/disponibilidad/[id]", params: { id: espacio.id } })}
             />
+            <Pressable style={estilos.secundario} onPress={() => router.push({ pathname: "/mapa", params: { espacioId: espacio.id } })}>
+              <Text style={estilos.secundarioTexto}>Ver en el mapa</Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -154,6 +162,12 @@ const estilos = StyleSheet.create({
     fontSize: 13,
     textTransform: "uppercase",
   },
+  deporte: {
+    color: colores.verdeSecundario,
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
   nombre: {
     color: colores.textoOscuro,
     fontSize: 24,
@@ -193,4 +207,13 @@ const estilos = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  secundario: {
+    alignItems: "center",
+    marginTop: 12,
+  },
+  secundarioTexto: {
+    color: colores.verdePrincipal,
+    fontSize: 14,
+    fontWeight: "600",
+  }
 });
