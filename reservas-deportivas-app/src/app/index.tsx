@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Espacio } from "@/tipos/espacio";
@@ -53,6 +54,21 @@ export default function Home() {
     cargarEspacios();
   }, []);
 
+  const [refrescando, setRefrescando] = useState(false);
+
+  const refrescar = async () => {
+    setRefrescando(true);
+    try {
+      const datos = await getEspacios();
+      setEspacios(datos);
+    } catch {
+      setError("No se pudieron cargar los espacios. Intentalo nuevamente.");
+      setEstado("error");
+    } finally {
+      setRefrescando(false);
+    }
+  };
+
   const complejos = useMemo(() => {
     return Array.from(new Set(espacios.map((espacio) => espacio.complejo)));
   }, [espacios]);
@@ -93,6 +109,12 @@ export default function Home() {
         style={estilos.scroll}
         contentContainerStyle={estilos.contenidoScroll}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refrescando}
+            onRefresh={refrescar}
+            />
+        }
       >
         <Buscador valor={busqueda} onChangeText={setBusqueda} />
 
