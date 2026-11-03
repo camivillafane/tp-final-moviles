@@ -9,6 +9,7 @@ import {
 import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Espacio } from "@/tipos/espacio";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
 import { EstadoError } from "@/componentes/EstadoError";
@@ -27,6 +28,7 @@ const COORDENADAS_VILLAGUAY: Region = {
 
 export default function Mapa() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
 
   const [espacios, setEspacios] = useState<Espacio[]>([]);
@@ -100,7 +102,7 @@ export default function Mapa() {
   }
 
   return (
-    <View style={estilos.contenedor}>
+    <SafeAreaView style={estilos.contenedor} edges={["top"]}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
 
       <MapView
@@ -119,22 +121,34 @@ export default function Mapa() {
             }}
             title={espacio.nombre}
             description={espacio.complejo}
+            accessibilityLabel={`${espacio.nombre}, ${espacio.complejo}`}
+            accessibilityHint="Toca para ver los datos del espacio"
             onPress={() => setEspacioSeleccionado(espacio)}
           />
         ))}
       </MapView>
 
       <View style={estilos.controles}>
-        <Pressable style={estilos.botonControl} onPress={centrarEnMiUbicacion}>
+        <Pressable
+          style={estilos.botonControl}
+          onPress={centrarEnMiUbicacion}
+          accessibilityRole="button"
+          accessibilityLabel="Centrar el mapa en mi ubicación"
+        >
           <IonIcons name="locate" size={22} color={colores.verdePrincipal} />
         </Pressable>
-        <Pressable style={estilos.botonControl} onPress={volverAVillaguay}>
+        <Pressable
+          style={estilos.botonControl}
+          onPress={volverAVillaguay}
+          accessibilityRole="button"
+          accessibilityLabel="Volver al centro de Villaguay"
+        >
           <IonIcons name="home" size={22} color={colores.verdePrincipal} />
         </Pressable>
       </View>
 
       {espacioSeleccionado && (
-        <View style={estilos.tarjeta}>
+        <View style={[estilos.tarjeta, { bottom: 24 + insets.bottom }]}>
           <Text style={estilos.complejo}>{espacioSeleccionado.complejo}</Text>
           <Text style={estilos.nombre}>{espacioSeleccionado.nombre}</Text>
 
@@ -160,12 +174,14 @@ export default function Mapa() {
           <Pressable
             style={estilos.cerrar}
             onPress={() => setEspacioSeleccionado(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar información del espacio"
           >
             <Text style={estilos.cerrarTexto}>Cerrar</Text>
           </Pressable>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

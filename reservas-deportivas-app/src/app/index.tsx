@@ -5,10 +5,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Espacio } from "@/tipos/espacio";
 import { Deporte } from "@/tipos/deporte";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
@@ -102,7 +102,7 @@ export default function Home() {
   }
 
   return (
-    <View style={estilos.contenedor}>
+    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <HeaderInstitucional onPerfilPress={() => console.log("Ir a perfil")} />
 
       <ScrollView
@@ -186,7 +186,7 @@ export default function Home() {
           />
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

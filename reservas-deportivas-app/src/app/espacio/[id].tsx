@@ -9,6 +9,7 @@ import {
   Pressable
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Espacio } from "@/tipos/espacio";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
 import { EstadoError } from "@/componentes/EstadoError";
@@ -72,7 +73,7 @@ export default function DetalleEspacio() {
   const deporte = deportesMock.find((d) => d.id === espacio?.deporteId);
 
   return (
-    <View style={estilos.contenedor}>
+    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
       <ScrollView style={estilos.scroll} showsVerticalScrollIndicator={false}>
         <FlatList
@@ -123,7 +124,7 @@ export default function DetalleEspacio() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
