@@ -1,5 +1,7 @@
 import { Coordenadas, Espacio } from "@/tipos/espacio";
 import { imagenesEspacio } from "@/mocks/imagenes";
+import { videosEspacio } from "@/mocks/videos";
+import { DO_NOT_USE_OR_YOU_WILL_BE_FIRED_EXPERIMENTAL_IMG_SRC_TYPES } from "react";
 
 const c = (lat: number, lon: number): Coordenadas => ({ latitud: lat, longitud: lon });
 
@@ -185,4 +187,5 @@ const espaciosBase: Espacio[] = [
 export const espaciosMock: Espacio[] = espaciosBase.map((espacio) => ({
   ...espacio,
   imagenes: imagenesEspacio[espacio.id] ?? espacio.imagenes,
+  videoUrl: videosEspacio[espacio.id] ?? null,
 }));

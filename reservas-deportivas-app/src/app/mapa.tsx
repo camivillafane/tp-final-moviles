@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Espacio } from "@/tipos/espacio";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
@@ -28,6 +28,7 @@ const COORDENADAS_VILLAGUAY: Region = {
 
 export default function Mapa() {
   const router = useRouter();
+  const { espacioId } = useLocalSearchParams<{ espacioId?: string }>();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
 
@@ -56,6 +57,24 @@ export default function Mapa() {
   useEffect(() => {
     cargarMapa();
   }, []);
+
+  useEffect(() => {
+    if (!espacioId || espacios.length === 0) return;
+
+    const encontrado = espacios.find((espacio) => espacio.id === espacioId);
+    if (!encontrado) return;
+
+    setEspacioSeleccionado(encontrado);
+    mapRef.current?.animateToRegion(
+      {
+        latitude: encontrado.coordenadas.latitud,
+        longitude: encontrado.coordenadas.longitud,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      600
+    );
+  }, [espacioId, espacios]);
 
   const centrarEnMiUbicacion = async () => {
     try {

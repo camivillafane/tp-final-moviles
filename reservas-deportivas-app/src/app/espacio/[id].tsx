@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import {
   FlatList,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +20,7 @@ import { BotonCta } from "@/componentes/BotonCta";
 import { colores } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
 import { deportesMock } from "@/mocks/deportes";
+import { VideoEspacio } from "@/componentes/VideoEspacio";
 
 export default function DetalleEspacio() {
   const router = useRouter();
@@ -76,21 +79,23 @@ export default function DetalleEspacio() {
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
       <ScrollView style={estilos.scroll} showsVerticalScrollIndicator={false}>
-        <FlatList
-          data={espacio.imagenes}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item, index) => `${item}-${index}`}
-          renderItem={({ item }) => (
-            <Image source={{ uri: item }} style={estilos.imagen} resizeMode="cover" />
-          )}
-        />
-
         <View style={estilos.contenido}>
           <Text style={estilos.complejo}>{espacio.complejo}</Text>
           <Text style={estilos.deporte}>{deporte?.nombre}</Text>
           <Text style={estilos.nombre}>{espacio.nombre}</Text>
+
+          {!espacio.activo && (
+            <View style={estilos.badgeInactivo}>
+              <Text style={estilos.badgeTexto}>No disponible</Text>
+            </View>
+          )}
+
+          <GaleriaEspacio imagenes={espacio.imagenes} />
+
+          <View style={estilos.seccion}>
+            <Text style={estilos.tituloSeccion}>Video del espacio</Text>
+            <VideoEspacio url={espacio.videoUrl} />
+          </View>
 
           <View style={estilos.seccion}>
             <Text style={estilos.tituloSeccion}>Características</Text>
@@ -116,6 +121,7 @@ export default function DetalleEspacio() {
           <View style={estilos.seccion}>
             <BotonCta
               titulo="Ver disponibilidad"
+              deshabilitado={!espacio.activo}
               onPress={() => router.push({ pathname: "/disponibilidad/[id]", params: { id: espacio.id } })}
             />
             <Pressable style={estilos.secundario} onPress={() => router.push({ pathname: "/mapa", params: { espacioId: espacio.id } })}>
@@ -125,6 +131,101 @@ export default function DetalleEspacio() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+interface GaleriaEspacioProps {
+  imagenes: string[];
+}
+
+/**
+ * Galería de fotos.
+ *
+ * Cada slide mide exactamente el ancho interno de la tarjeta y la lista
+ * también, así el `pagingEnabled` corta justo en cada foto y nunca se
+ * asoma un pedazo de la siguiente.
+ */
+function GaleriaEspacio({ imagenes }: GaleriaEspacioProps) {
+  const [ancho, setAncho] = useState(0);
+  const [indice, setIndice] = useState(0);
+
+  if (imagenes.length === 0) {
+    return (
+      <View style={estilos.seccion}>
+        <Text style={estilos.tituloSeccion}>Fotos del espacio</Text>
+        <View style={estilos.fotoVacia}>
+          <Text style={estilos.textoVacio}>
+            Este espacio todavía no tiene fotos.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Las fotos son 1200x805. Usamos la misma proporción para que
+  // `cover` no recorte nada: la imagen entra completa.
+  const alto = Math.round((ancho * 805) / 1200);
+
+  const alTerminarScroll = (
+    evento: NativeSyntheticEvent<NativeScrollEvent>
+  ) => {
+    const nuevoIndice = Math.round(
+      evento.nativeEvent.contentOffset.x / ancho
+    );
+    if (nuevoIndice !== indice) setIndice(nuevoIndice);
+  };
+
+  return (
+    <View style={estilos.seccion}>
+      <Text style={estilos.tituloSeccion}>Fotos del espacio</Text>
+
+      {/*
+        Medimos el ancho real del contenedor con onLayout. Así el slide
+        mide exactamente lo mismo que la lista y `pagingEnabled` corta
+        justo en cada foto, sin corrimientos.
+      */}
+      <View
+        onLayout={(evento) => {
+          const medido = evento.nativeEvent.layout.width;
+          if (Math.abs(medido - ancho) > 0.5) setAncho(medido);
+        }}
+      >
+        {ancho > 0 && (
+          <FlatList
+            data={imagenes}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `${index}-${item}`}
+            onMomentumScrollEnd={alTerminarScroll}
+            getItemLayout={(_, index) => ({
+              length: ancho,
+              offset: ancho * index,
+              index,
+            })}
+            renderItem={({ item, index }) => (
+              <Image
+                source={{ uri: item }}
+                style={[estilos.foto, { width: ancho, height: alto }]}
+                resizeMode="cover"
+                accessibilityLabel={`Foto ${index + 1} de ${imagenes.length}`}
+              />
+            )}
+          />
+        )}
+      </View>
+
+      {imagenes.length > 1 && (
+        <View style={estilos.dots}>
+          {imagenes.map((_, i) => (
+            <View
+              key={i}
+              style={[estilos.dot, i === indice && estilos.dotActivo]}
+            />
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -150,9 +251,38 @@ const estilos = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  imagen: {
-    height: 260,
-    width: 360,
+  foto: {
+    borderRadius: 10,
+  },
+  fotoVacia: {
+    alignItems: "center",
+    backgroundColor: colores.fondo,
+    borderColor: colores.borde,
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: "center",
+    paddingVertical: 24,
+  },
+  textoVacio: {
+    color: colores.verdeGrisaceo,
+    fontSize: 14,
+  },
+  dots: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "center",
+    marginTop: 12,
+  },
+  dot: {
+    backgroundColor: colores.borde,
+    borderRadius: 3,
+    height: 6,
+    width: 6,
+  },
+  dotActivo: {
+    backgroundColor: colores.verdePrincipal,
+    width: 18,
   },
   contenido: {
     padding: 20,
@@ -216,5 +346,18 @@ const estilos = StyleSheet.create({
     color: colores.verdePrincipal,
     fontSize: 14,
     fontWeight: "600",
+  },
+  badgeInactivo: {
+    alignSelf: "flex-start",
+    backgroundColor: "#f3e1e1",
+    borderRadius: 8,
+    marginBottom: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  badgeTexto: {
+    color: "#8a2f2f",
+    fontSize: 12,
+    fontWeight: "700",
   }
 });

@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -19,7 +17,6 @@ import { Buscador } from "@/componentes/Buscador";
 import { ChipDisciplina } from "@/componentes/ChipDisciplina";
 import { ChipFiltro } from "@/componentes/ChipFiltro";
 import { CardEspacio } from "@/componentes/CardEspacio";
-import { BotonCta } from "@/componentes/BotonCta";
 import { colores } from "@/constantes/colores";
 import { getEspacios } from "@/servicios/espacios";
 import { deportesMock } from "@/mocks/deportes";
@@ -32,7 +29,15 @@ export default function Home() {
   const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const [deportes] = useState<Deporte[]>(deportesMock);
+  const deportes = useMemo<Deporte[]>(() => {
+    const idsConEspacios = new Set(
+      espacios
+        .filter((espacio) => espacio.activo)
+        .map((espacio) => espacio.deporteId)
+    );
+    return deportesMock.filter((deporte) => idsConEspacios.has(deporte.id));
+  }, [espacios]);
+
   const [deporteSeleccionado, setDeporteSeleccionado] = useState<string | null>(null);
   const [complejoSeleccionado, setComplejoSeleccionado] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
@@ -71,11 +76,19 @@ export default function Home() {
   };
 
   const complejos = useMemo(() => {
-    return Array.from(new Set(espacios.map((espacio) => espacio.complejo)));
+    return Array.from(
+      new Set(
+        espacios
+          .filter((espacio) => espacio.activo)
+          .map((espacio) => espacio.complejo)
+      )
+    );
   }, [espacios]);
 
   const espaciosFiltrados = useMemo(() => {
     return espacios.filter((espacio) => {
+      if (!espacio.activo) return false;
+
       const coincideDeporte = deporteSeleccionado
         ? espacio.deporteId === deporteSeleccionado
         : true;
@@ -174,17 +187,18 @@ export default function Home() {
         {espaciosFiltrados.length === 0 ? (
           <EstadoVacio mensaje="No se encontraron espacios con ese filtro." />
         ) : (
-          <FlatList
-            data={espaciosFiltrados}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <CardEspacio
-                espacio={item}
-                onVerDisponibilidad={() => router.push({ pathname: "/espacio/[id]", params: { id: item.id } })}
-              />
-            )}
-          />
+          espaciosFiltrados.map((espacio) => (
+            <CardEspacio
+              key={espacio.id}
+              espacio={espacio}
+              onVerDisponibilidad={() =>
+                router.push({
+                  pathname: "/espacio/[id]",
+                  params: { id: espacio.id },
+                })
+              }
+            />
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
