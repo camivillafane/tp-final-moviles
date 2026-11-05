@@ -5,10 +5,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  View,
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Espacio } from "@/tipos/espacio";
 import { Deporte } from "@/tipos/deporte";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
@@ -23,6 +23,7 @@ import { BotonCta } from "@/componentes/BotonCta";
 import { colores } from "@/constantes/colores";
 import { getEspacios } from "@/servicios/espacios";
 import { deportesMock } from "@/mocks/deportes";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Home() {
   const router = useRouter();
@@ -102,7 +103,7 @@ export default function Home() {
   }
 
   return (
-    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+    <SafeAreaView style={estilos.contenedor} edges={["top"]}>
       <HeaderInstitucional onPerfilPress={() => console.log("Ir a perfil")} />
 
       <ScrollView
