@@ -1,8 +1,9 @@
 import { Coordenadas, Espacio } from "@/tipos/espacio";
+import { imagenesEspacio } from "@/mocks/imagenes";
 
 const c = (lat: number, lon: number): Coordenadas => ({ latitud: lat, longitud: lon });
 
-export const espaciosMock: Espacio[] = [
+const espaciosBase: Espacio[] = [
   {
     id: "espacio-02",
     nombre: "Cancha 2 — Fútbol 5",
@@ -180,3 +181,8 @@ export const espaciosMock: Espacio[] = [
     activo: true,
   },
 ];
+
+export const espaciosMock: Espacio[] = espaciosBase.map((espacio) => ({
+  ...espacio,
+  imagenes: imagenesEspacio[espacio.id] ?? espacio.imagenes,
+}));
