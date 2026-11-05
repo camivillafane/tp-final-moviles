@@ -55,10 +55,7 @@ const estilos = StyleSheet.create({
     },
     sinVideo: {
         alignItems: 'center',
-        backgroundColor: colores.fondo,
-        borderColor: colores.borde,
         borderRadius: 10,
-        borderWidth: 1,
         justifyContent: 'center',
         paddingVertical: 24,
         width: '100%',

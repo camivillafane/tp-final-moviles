@@ -1,6 +1,5 @@
 import { DiaBloqueado, ReservaFija, Turno } from "@/tipos/turno";
 
-// Fechas relativas para que los ejemplos sigan apareciendo en los próximos siete días.
 const fechaRelativa = (dias: number): string => {
   const fecha = new Date();
   fecha.setDate(fecha.getDate() + dias);

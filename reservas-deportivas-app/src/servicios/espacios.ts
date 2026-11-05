@@ -3,7 +3,7 @@ import { cliente } from "./cliente";
 import { Espacio } from "@/tipos/espacio";
 import { espaciosMock } from "@/mocks/espacios";
 
-const USE_MOCKS: boolean = true; // ← false cuando exista el backend
+const USE_MOCKS: boolean = true;
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

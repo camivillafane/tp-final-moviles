@@ -79,6 +79,8 @@ export default function DetalleEspacio() {
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
       <ScrollView style={estilos.scroll} showsVerticalScrollIndicator={false}>
+        <GaleriaEspacio imagenes={espacio.imagenes} />
+
         <View style={estilos.contenido}>
           <Text style={estilos.complejo}>{espacio.complejo}</Text>
           <Text style={estilos.deporte}>{deporte?.nombre}</Text>
@@ -89,8 +91,6 @@ export default function DetalleEspacio() {
               <Text style={estilos.badgeTexto}>No disponible</Text>
             </View>
           )}
-
-          <GaleriaEspacio imagenes={espacio.imagenes} />
 
           <View style={estilos.seccion}>
             <Text style={estilos.tituloSeccion}>Video del espacio</Text>
@@ -138,91 +138,75 @@ interface GaleriaEspacioProps {
   imagenes: string[];
 }
 
-/**
- * Galería de fotos.
- *
- * Cada slide mide exactamente el ancho interno de la tarjeta y la lista
- * también, así el `pagingEnabled` corta justo en cada foto y nunca se
- * asoma un pedazo de la siguiente.
- */
 function GaleriaEspacio({ imagenes }: GaleriaEspacioProps) {
   const [ancho, setAncho] = useState(0);
   const [indice, setIndice] = useState(0);
 
-  if (imagenes.length === 0) {
-    return (
-      <View style={estilos.seccion}>
-        <Text style={estilos.tituloSeccion}>Fotos del espacio</Text>
-        <View style={estilos.fotoVacia}>
-          <Text style={estilos.textoVacio}>
-            Este espacio todavía no tiene fotos.
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Las fotos son 1200x805. Usamos la misma proporción para que
-  // `cover` no recorte nada: la imagen entra completa.
   const alto = Math.round((ancho * 805) / 1200);
 
   const alTerminarScroll = (
     evento: NativeSyntheticEvent<NativeScrollEvent>
   ) => {
+    if (ancho === 0) return;
+
     const nuevoIndice = Math.round(
       evento.nativeEvent.contentOffset.x / ancho
     );
     if (nuevoIndice !== indice) setIndice(nuevoIndice);
   };
 
-  return (
-    <View style={estilos.seccion}>
-      <Text style={estilos.tituloSeccion}>Fotos del espacio</Text>
-
-      {/*
-        Medimos el ancho real del contenedor con onLayout. Así el slide
-        mide exactamente lo mismo que la lista y `pagingEnabled` corta
-        justo en cada foto, sin corrimientos.
-      */}
-      <View
-        onLayout={(evento) => {
-          const medido = evento.nativeEvent.layout.width;
-          if (Math.abs(medido - ancho) > 0.5) setAncho(medido);
-        }}
-      >
-        {ancho > 0 && (
-          <FlatList
-            data={imagenes}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => `${index}-${item}`}
-            onMomentumScrollEnd={alTerminarScroll}
-            getItemLayout={(_, index) => ({
-              length: ancho,
-              offset: ancho * index,
-              index,
-            })}
-            renderItem={({ item, index }) => (
-              <Image
-                source={{ uri: item }}
-                style={[estilos.foto, { width: ancho, height: alto }]}
-                resizeMode="cover"
-                accessibilityLabel={`Foto ${index + 1} de ${imagenes.length}`}
-              />
-            )}
-          />
-        )}
+  if (imagenes.length === 0) {
+    return (
+      <View style={estilos.galeriaVacia}>
+        <Text style={estilos.textoVacio}>
+          Este espacio todavía no tiene fotos.
+        </Text>
       </View>
+    );
+  }
+
+  return (
+    <View
+      style={estilos.galeria}
+      onLayout={(evento) => {
+        const medido = evento.nativeEvent.layout.width;
+        if (Math.abs(medido - ancho) > 0.5) setAncho(medido);
+      }}
+    >
+      {ancho > 0 && (
+        <FlatList
+          data={imagenes}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item, index) => `${index}-${item}`}
+          onMomentumScrollEnd={alTerminarScroll}
+          getItemLayout={(_, index) => ({
+            length: ancho,
+            offset: ancho * index,
+            index,
+          })}
+          renderItem={({ item, index }) => (
+            <Image
+              source={{ uri: item }}
+              style={[estilos.foto, { width: ancho, height: alto }]}
+              resizeMode="cover"
+              accessibilityLabel={`Foto ${index + 1} de ${imagenes.length}`}
+            />
+          )}
+        />
+      )}
 
       {imagenes.length > 1 && (
-        <View style={estilos.dots}>
-          {imagenes.map((_, i) => (
-            <View
-              key={i}
-              style={[estilos.dot, i === indice && estilos.dotActivo]}
-            />
-          ))}
+        <View style={estilos.dotsContenedor} pointerEvents="none">
+          <View style={estilos.dotsFondo}>
+            {imagenes.map((_, i) => (
+              <View
+                key={i}
+                style={[estilos.dot, i === indice && estilos.dotActivo]}
+              />
+            ))}
+          </View>
         </View>
       )}
     </View>
@@ -252,36 +236,47 @@ const estilos = StyleSheet.create({
     flex: 1,
   },
   foto: {
-    borderRadius: 10,
+    backgroundColor: colores.fondo,
   },
-  fotoVacia: {
+  galeria: {
+    position: "relative",
+    width: "100%",
+  },
+  galeriaVacia: {
     alignItems: "center",
     backgroundColor: colores.fondo,
-    borderColor: colores.borde,
-    borderRadius: 10,
-    borderWidth: 1,
     justifyContent: "center",
-    paddingVertical: 24,
+    minHeight: 160,
+    paddingHorizontal: 20,
+    width: "100%",
   },
   textoVacio: {
     color: colores.verdeGrisaceo,
     fontSize: 14,
   },
-  dots: {
+  dotsContenedor: {
     alignItems: "center",
+    bottom: 12,
+    left: 0,
+    position: "absolute",
+    right: 0,
+  },
+  dotsFondo: {
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    borderRadius: 999,
     flexDirection: "row",
     gap: 6,
-    justifyContent: "center",
-    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   dot: {
-    backgroundColor: colores.borde,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
     borderRadius: 3,
     height: 6,
     width: 6,
   },
   dotActivo: {
-    backgroundColor: colores.verdePrincipal,
+    backgroundColor: colores.blanco,
     width: 18,
   },
   contenido: {
