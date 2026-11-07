@@ -29,9 +29,9 @@ export const videosEspacio: Record<string, string> = {
     //require("../../assets/espacios/videos/espacio-tenis-cancha1.mp4")
   //),
 
-  //"espacio-09": local(
-    //require("../../assets/espacios/videos/espacio-tenis-cancha2.mp4")
-  //),
+  "espacio-09": local(
+    require("../../assets/espacios/videos/espacio-tenis-cancha2.mp4")
+  ),
 
   "espacio-10": local(
     require("../../assets/espacios/videos/espacio-padel.mp4")
