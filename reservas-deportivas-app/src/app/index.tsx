@@ -20,10 +20,15 @@ import { CardEspacio } from "@/componentes/CardEspacio";
 import { colores } from "@/constantes/colores";
 import { getEspacios } from "@/servicios/espacios";
 import { deportesMock } from "@/mocks/deportes";
+import { MenuPerfil } from "@/componentes/MenuPerfil";
+import { sesionMock } from "@/mocks/sesionUsuario";
+import { Usuario } from "@/tipos/usuario";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Home() {
   const router = useRouter();
+  const [usuario, setUsuario] = useState<Usuario | null>(sesionMock);
+  const [menuPerfilVisible, setMenuPerfilVisible] = useState(false);
 
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -117,7 +122,7 @@ export default function Home() {
 
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top"]}>
-      <HeaderInstitucional onPerfilPress={() => console.log("Ir a perfil")} />
+      <HeaderInstitucional onPerfilPress={() => setMenuPerfilVisible(true)} />
 
       <ScrollView
         style={estilos.scroll}
@@ -201,6 +206,16 @@ export default function Home() {
           ))
         )}
       </ScrollView>
+
+      <MenuPerfil
+        visible={menuPerfilVisible}
+        usuario={usuario}
+        onCerrar={() => setMenuPerfilVisible(false)}
+        onCerrarSesion={() => {
+          setUsuario(null);
+          setMenuPerfilVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
