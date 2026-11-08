@@ -6,10 +6,10 @@ import { BotonCta } from "./BotonCta";
 
 interface CardEspacioProps {
   espacio: Espacio;
-  onVerDisponibilidad: () => void;
+  onVerDetalle: () => void;
 }
 
-export function CardEspacio({ espacio, onVerDisponibilidad }: CardEspacioProps) {
+export function CardEspacio({ espacio, onVerDetalle }: CardEspacioProps) {
   const imagen = espacio.imagenes[0];
 
   return (
@@ -33,7 +33,7 @@ export function CardEspacio({ espacio, onVerDisponibilidad }: CardEspacioProps) 
               ? "Gratis"
               : `$${espacio.precioPorHora.toLocaleString("es-AR")}/hora`}
           </Text>
-          <BotonCta titulo="Ver disponibilidad" onPress={onVerDisponibilidad} />
+          <BotonCta titulo="Ver detalle" onPress={onVerDetalle} />
         </View>
       </View>
     </View>

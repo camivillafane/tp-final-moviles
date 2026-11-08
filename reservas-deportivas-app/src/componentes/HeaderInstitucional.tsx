@@ -34,9 +34,18 @@ export function HeaderInstitucional({
       </View>
 
       <View style={[estilos.lado, estilos.ladoDerecho]}>
-        <Pressable onPress={onPerfilPress} style={estilos.boton}>
-          <IonIcons name="person-circle-outline" size={36} color={colores.verdePrincipal} />
-        </Pressable>
+        {onPerfilPress ? (
+          <Pressable
+            onPress={onPerfilPress}
+            style={estilos.boton}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir menú de perfil"
+          >
+            <IonIcons name="person-circle-outline" size={36} color={colores.verdePrincipal} />
+          </Pressable>
+        ) : (
+          <View style={estilos.boton} />
+        )}
       </View>
     </View>
   );

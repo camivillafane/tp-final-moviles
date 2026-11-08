@@ -196,7 +196,7 @@ export default function Home() {
             <CardEspacio
               key={espacio.id}
               espacio={espacio}
-              onVerDisponibilidad={() =>
+              onVerDetalle={() =>
                 router.push({
                   pathname: "/espacio/[id]",
                   params: { id: espacio.id },

@@ -22,8 +22,8 @@ import IonIcons from "@react-native-vector-icons/ionicons";
 const COORDENADAS_VILLAGUAY: Region = {
   latitude: -31.8642,
   longitude: -59.0281,
-  latitudeDelta: 0.035,
-  longitudeDelta: 0.035,
+  latitudeDelta: 0.015,
+  longitudeDelta: 0.015,
 };
 
 export default function Mapa() {

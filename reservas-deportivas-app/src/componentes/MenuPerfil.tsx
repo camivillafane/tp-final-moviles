@@ -5,6 +5,7 @@ import IonIcons from "@react-native-vector-icons/ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AvatarUsuario } from "@/componentes/AvatarUsuario";
 import { colores } from "@/constantes/colores";
+import { roles } from "@/constantes/roles";
 import { Usuario } from "@/tipos/usuario";
 
 type NombreIcono = ComponentProps<typeof IonIcons>["name"];
@@ -108,7 +109,7 @@ export function MenuPerfil({
                                     {usuario.email}
                                 </Text>
                                 <Text style={estilos.rol}>
-                                    {usuario.rol === "jugador" ? "Jugador" : "Encargado"}
+                                    {roles[usuario.rol]}
                                 </Text>
                             </View>
                         </View>

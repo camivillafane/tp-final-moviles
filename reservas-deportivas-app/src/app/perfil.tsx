@@ -7,6 +7,7 @@ import { AvatarUsuario } from "@/componentes/AvatarUsuario";
 import { EstadoVacio } from "@/componentes/EstadoVacio";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { colores } from "@/constantes/colores";
+import { roles } from "@/constantes/roles";
 import { sesionMock } from "@/mocks/sesionUsuario";
 
 export default function Perfil() {
@@ -33,7 +34,7 @@ export default function Perfil() {
                     <Text style={estilos.nombre}>{sesionMock.nombre}</Text>
                     <View style={estilos.chipRol}>
                         <Text style={estilos.chipTexto}>
-                        {sesionMock.rol === "jugador" ? "Jugador" : "Encargado"}
+                        {roles[sesionMock.rol]}
                         </Text>
                     </View>
                 </View>
