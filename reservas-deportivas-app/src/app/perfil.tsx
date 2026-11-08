@@ -8,12 +8,13 @@ import { EstadoVacio } from "@/componentes/EstadoVacio";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { colores } from "@/constantes/colores";
 import { roles } from "@/constantes/roles";
-import { sesionMock } from "@/mocks/sesionUsuario";
+import { useSesion } from "@/contextos/Sesion";
 
 export default function Perfil() {
     const router = useRouter();
+    const { usuario } = useSesion();
 
-    if (!sesionMock) {
+    if (!usuario) {
         return (
             <SafeAreaView style={estilos.contenedor} edges={["top","bottom"]}>
                 <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
@@ -30,11 +31,11 @@ export default function Perfil() {
                 showsVerticalScrollIndicator={false}
             >
                 <View style = {estilos.card}>
-                    <AvatarUsuario nombre = {sesionMock.nombre} tamaño={80} />
-                    <Text style={estilos.nombre}>{sesionMock.nombre}</Text>
+                    <AvatarUsuario nombre = {usuario.nombre} tamaño={80} />
+                    <Text style={estilos.nombre}>{usuario.nombre}</Text>
                     <View style={estilos.chipRol}>
                         <Text style={estilos.chipTexto}>
-                        {roles[sesionMock.rol]}
+                        {roles[usuario.rol]}
                         </Text>
                     </View>
                 </View>
@@ -43,13 +44,13 @@ export default function Perfil() {
                     <Fila
                         icono="mail-outline"
                         etiqueta="Email"
-                        valor={sesionMock.email}
+                        valor={usuario.email}
                     />
                     <View style={estilos.separador} />
                     <Fila
                         icono="call-outline"
                         etiqueta="Teléfono"
-                        valor={sesionMock.telefono}
+                        valor={usuario.telefono}
                     />
                 </View>
             </ScrollView>
