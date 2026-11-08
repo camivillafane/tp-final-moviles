@@ -6,9 +6,9 @@ export const videosEspacio: Record<string, string> = {
   "espacio-01": local(
     require("../../assets/espacios/videos/espacio-futbol5-cancha1.mp4")
   ),
-  //"espacio-02": local(
-    //require("../../assets/espacios/videos/espacio-futbol5-cancha2.mp4")
-  //),
+  "espacio-02": local(
+    require("../../assets/espacios/videos/espacio-futbol5-cancha2.mp4")
+  ),
   "espacio-03": local(
     require("../../assets/espacios/videos/espacio-basquet-cancha.mp4")
   ),
@@ -25,9 +25,9 @@ export const videosEspacio: Record<string, string> = {
     require("../../assets/espacios/videos/espacio-futbol11.mp4")
   ),
 
-  //"espacio-08": local(
-    //require("../../assets/espacios/videos/espacio-tenis-cancha1.mp4")
-  //),
+  "espacio-08": local(
+    require("../../assets/espacios/videos/espacio-tenis-cancha1.mp4")
+  ),
 
   "espacio-09": local(
     require("../../assets/espacios/videos/espacio-tenis-cancha2.mp4")
