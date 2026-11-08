@@ -21,10 +21,15 @@ import { colores } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
 import { deportesMock } from "@/mocks/deportes";
 import { VideoEspacio } from "@/componentes/VideoEspacio";
+import IonIcons from "@react-native-vector-icons/ionicons";
+import { useFavoritos } from "@/contextos/Favoritos";
+import { useSesion } from "@/contextos/Sesion";
 
 export default function DetalleEspacio() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { usuario } = useSesion();
+  const { esFavorito, alternarFavorito } = useFavoritos();
 
   const [espacio, setEspacio] = useState<Espacio | null>(null);
   const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -74,6 +79,7 @@ export default function DetalleEspacio() {
   }
 
   const deporte = deportesMock.find((d) => d.id === espacio?.deporteId);
+  const favorito = esFavorito(espacio.id);
 
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
@@ -84,7 +90,25 @@ export default function DetalleEspacio() {
         <View style={estilos.contenido}>
           <Text style={estilos.complejo}>{espacio.complejo}</Text>
           <Text style={estilos.deporte}>{deporte?.nombre}</Text>
-          <Text style={estilos.nombre}>{espacio.nombre}</Text>
+          <View style={estilos.filaNombre}>
+            <Text style={estilos.nombre}>{espacio.nombre}</Text>
+            {usuario && (
+              <Pressable
+                style={estilos.botonFavorito}
+                onPress={() => alternarFavorito(espacio.id)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  favorito ? "Quitar de favoritos" : "Agregar a favoritos"
+                }
+              >
+                <IonIcons
+                  name={favorito ? "heart" : "heart-outline"}
+                  size={28}
+                  color={colores.magentaPrincipal}
+                />
+              </Pressable>
+            )}
+          </View>
 
           {!espacio.activo && (
             <View style={estilos.badgeInactivo}>
@@ -294,11 +318,20 @@ const estilos = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 4,
   },
+  filaNombre: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
   nombre: {
     color: colores.textoOscuro,
+    flex: 1,
     fontSize: 24,
     fontWeight: "700",
-    marginBottom: 16,
+  },
+  botonFavorito: {
+    padding: 4,
   },
   seccion: {
     backgroundColor: colores.blanco,

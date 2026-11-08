@@ -21,13 +21,12 @@ import { colores } from "@/constantes/colores";
 import { getEspacios } from "@/servicios/espacios";
 import { deportesMock } from "@/mocks/deportes";
 import { MenuPerfil } from "@/componentes/MenuPerfil";
-import { sesionMock } from "@/mocks/sesionUsuario";
-import { Usuario } from "@/tipos/usuario";
+import { useSesion } from "@/contextos/Sesion";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Home() {
   const router = useRouter();
-  const [usuario, setUsuario] = useState<Usuario | null>(sesionMock);
+  const { usuario, cerrarSesion } = useSesion();
   const [menuPerfilVisible, setMenuPerfilVisible] = useState(false);
 
   const [espacios, setEspacios] = useState<Espacio[]>([]);
@@ -212,7 +211,7 @@ export default function Home() {
         usuario={usuario}
         onCerrar={() => setMenuPerfilVisible(false)}
         onCerrarSesion={() => {
-          setUsuario(null);
+          cerrarSesion();
           setMenuPerfilVisible(false);
         }}
       />

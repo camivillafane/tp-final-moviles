@@ -68,7 +68,7 @@ export function MenuPerfil({
                 {
                     etiqueta: "Mis favoritos",
                     icono: "heart-outline",
-                    destino: proximamente("Mis favoritos"),
+                    destino: "/favoritos",
                 }
             );
         } else {
