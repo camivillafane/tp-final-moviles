@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "turnos-app",
-    "slug": "turnos-app",
+    "name": "reservas-deportivas-app",
+    "slug": "reservas-deportivas-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "turnosapp",
+    "scheme": "reservasdeportivasapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -34,7 +34,14 @@
         }
       ],
       "@react-native-vector-icons/ionicons",
-      "expo-image"
+      "expo-image",
+      "expo-video",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "La app usa tu ubicacion para mostrarte los espacios deportivos mas cercanos."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

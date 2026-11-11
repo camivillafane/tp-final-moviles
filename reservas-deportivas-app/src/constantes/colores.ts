@@ -1,4 +1,4 @@
-export const COLORES = {
+export const colores = {
   verdePrincipal: '#486f56',
   verdeSecundario: '#6a8674',
   verdeGrisaceo: '#91a197',
