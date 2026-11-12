@@ -23,13 +23,12 @@ import { deportesMock } from "@/mocks/deportes";
 import { VideoEspacio } from "@/componentes/VideoEspacio";
 import IonIcons from "@react-native-vector-icons/ionicons";
 import { useFavoritos } from "@/contextos/Favoritos";
-import { useSesion } from "@/contextos/Sesion";
+import { sesionMock } from "@/mocks/sesionUsuario";
 
 export default function DetalleEspacio() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { usuario } = useSesion();
-  const { esFavorito, cambiarFavorito } = useFavoritos();
+  const { esFavorito, cambiarFavorito }=useFavoritos();
 
   const [espacio, setEspacio] = useState<Espacio | null>(null);
   const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -78,8 +77,8 @@ export default function DetalleEspacio() {
     return <EstadoError mensaje="El espacio no existe." />;
   }
 
-  const deporte = deportesMock.find((d) => d.id === espacio?.deporteId);
-  const favorito = esFavorito(espacio.id);
+  const deporte= deportesMock.find((d) => d.id === espacio?.deporteId);
+  const favorito= esFavorito(espacio.id);
 
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
@@ -91,24 +90,20 @@ export default function DetalleEspacio() {
           <Text style={estilos.complejo}>{espacio.complejo}</Text>
           <Text style={estilos.deporte}>{deporte?.nombre}</Text>
           <View style={estilos.filaNombre}>
-            <Text style={estilos.nombre}>{espacio.nombre}</Text>
-            {usuario && (
-              <Pressable
-                style={estilos.botonFavorito}
-                onPress={() => cambiarFavorito(espacio.id)}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  favorito ? "Quitar de favoritos" : "Agregar a favoritos"
-                }
-              >
-                <IonIcons
-                  name={favorito ? "heart" : "heart-outline"}
-                  size={28}
-                  color={colores.magentaPrincipal}
-                />
-              </Pressable>
-            )}
-          </View>
+          <Text style={estilos.nombre}>{espacio.nombre}</Text>
+          <Pressable
+            style={estilos.botonFavorito}
+            onPress={() => cambiarFavorito(espacio.id)}
+            accessibilityRole="button"
+            accessibilityLabel={favorito ? "Quitar de favoritos" : "Agregar a favoritos"}
+          >
+            <IonIcons
+              name={favorito ? "heart" : "heart-outline"}
+              size={28}
+              color={colores.magentaPrincipal}
+            />
+          </Pressable>
+        </View>
 
           {!espacio.activo && (
             <View style={estilos.badgeInactivo}>
