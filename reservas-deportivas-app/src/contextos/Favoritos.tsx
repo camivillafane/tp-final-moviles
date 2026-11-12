@@ -4,7 +4,7 @@ import { sesionMock } from "@/mocks/sesionUsuario";
 interface FavoritosContexto {
   favoritos: string[];
   esFavorito: (espacioId: string) => boolean;
-  alternarFavorito: (espacioId: string) => void;
+  cambiarFavorito: (espacioId: string) => void;
 }
 
 const FavoritosContext = createContext<FavoritosContexto | null>(null);
@@ -16,7 +16,7 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
 
   const esFavorito = (espacioId: string) => favoritos.includes(espacioId);
 
-  const alternarFavorito = (espacioId: string) => {
+  const cambiarFavorito = (espacioId: string) => {
     setFavoritos((actuales) =>
       actuales.includes(espacioId)
         ? actuales.filter((id) => id !== espacioId)
@@ -26,7 +26,7 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
 
   return (
     <FavoritosContext.Provider
-      value={{ favoritos, esFavorito, alternarFavorito }}
+      value={{ favoritos, esFavorito, cambiarFavorito }}
     >
       {children}
     </FavoritosContext.Provider>

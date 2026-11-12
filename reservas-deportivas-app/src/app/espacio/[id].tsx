@@ -29,7 +29,7 @@ export default function DetalleEspacio() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { usuario } = useSesion();
-  const { esFavorito, alternarFavorito } = useFavoritos();
+  const { esFavorito, cambiarFavorito } = useFavoritos();
 
   const [espacio, setEspacio] = useState<Espacio | null>(null);
   const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -95,7 +95,7 @@ export default function DetalleEspacio() {
             {usuario && (
               <Pressable
                 style={estilos.botonFavorito}
-                onPress={() => alternarFavorito(espacio.id)}
+                onPress={() => cambiarFavorito(espacio.id)}
                 accessibilityRole="button"
                 accessibilityLabel={
                   favorito ? "Quitar de favoritos" : "Agregar a favoritos"
