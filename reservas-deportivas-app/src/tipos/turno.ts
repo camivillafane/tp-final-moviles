@@ -35,4 +35,5 @@ export interface SolicitudReserva {
   inicio: string;
   fin: string;
   precio: number;
+  cantidadPersonas: number; //AGREGUE ESTO
 }
