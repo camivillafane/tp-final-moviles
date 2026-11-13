@@ -1,17 +1,15 @@
 import * as SQLite from "expo-sqlite";
 import type { Reserva } from "@/tipos/reserva";
 
-// Abre (o crea) la base de datos SQLite de forma asíncrona
 export const abrirBaseDeDatos = async () => {
   const db = await SQLite.openDatabaseAsync("reservas.db");
   return db;
 };
 
-// Inicializa las tablas necesarias para el módulo de reservas y favoritos
 export const inicializarBaseDeDatos = async () => {
   const db = await abrirBaseDeDatos();
 
-  // Tabla para almacenar las reservas del usuario localmente (offline)
+
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS reservas_locales (
@@ -31,7 +29,7 @@ export const inicializarBaseDeDatos = async () => {
     );
   `);
 
-  // Tabla para guardar los espacios favoritos del usuario localmente
+
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS favoritos_locales (
       espacioId TEXT PRIMARY KEY NOT NULL,
@@ -40,7 +38,7 @@ export const inicializarBaseDeDatos = async () => {
   `);
 };
 
-// 1. Guardar una nueva reserva en SQLite (para uso offline)
+
 export const guardarReservaLocal = async (reserva: Reserva): Promise<void> => {
   const db = await abrirBaseDeDatos();
   await db.runAsync(
@@ -64,7 +62,7 @@ export const guardarReservaLocal = async (reserva: Reserva): Promise<void> => {
   );
 };
 
-// 2. Obtener todas las reservas de un usuario desde SQLite (offline)
+
 export const obtenerReservasLocales = async (usuarioId: string): Promise<Reserva[]> => {
   const db = await abrirBaseDeDatos();
   const resultados = await db.getAllAsync<any>(
@@ -72,7 +70,7 @@ export const obtenerReservasLocales = async (usuarioId: string): Promise<Reserva
     [usuarioId]
   );
 
-  // Mapeamos los resultados para asegurar el tipado correcto
+
   return resultados.map((row) => ({
     id: row.id,
     usuarioId: row.usuarioId,
@@ -90,7 +88,7 @@ export const obtenerReservasLocales = async (usuarioId: string): Promise<Reserva
   }));
 };
 
-// 3. Actualizar el estado de una reserva localmente (ej: cancelarla)
+
 export const actualizarEstadoReservaLocal = async (reservaId: string, nuevoEstado: string): Promise<void> => {
   const db = await abrirBaseDeDatos();
   const canceladaEn = nuevoEstado === "cancelada" ? new Date().toISOString() : null;
