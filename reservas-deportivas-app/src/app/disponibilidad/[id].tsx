@@ -10,7 +10,7 @@ import { colores } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
 import { getDisponibilidad, getProximosSieteDias, prepararSolicitudReserva } from "@/servicios/disponibilidad";
 import { Espacio } from "@/tipos/espacio";
-import { SolicitudReserva, Turno } from "@/tipos/turno";
+import { TurnoSeleccionado, Turno } from "@/tipos/turno";
 
 const fechaLegible = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
 const etiquetas: Record<Turno["estado"], string> = { libre: "Libre", reservado: "Reservado", fijo: "Fijo", mantenimiento: "Mantenimiento" };
@@ -24,7 +24,7 @@ export default function Disponibilidad() {
   const [fecha, setFecha] = useState(fechas[0]);
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [seleccion, setSeleccion] = useState<Turno | null>(null);
-  const [solicitud, setSolicitud] = useState<SolicitudReserva | null>(null);
+  const [solicitud, setSolicitud] = useState<TurnoSeleccionado | null>(null);
   const [estado, setEstado] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState("No se pudo cargar la disponibilidad.");
 
@@ -67,8 +67,25 @@ export default function Disponibilidad() {
           })}
         </View>}
         {seleccion && <View style={styles.confirmacion}>
-          <Text style={styles.seleccionTexto}>Seleccionaste {seleccion.inicio}–{seleccion.fin}</Text>
-          <BotonCta titulo="Preparar reserva" onPress={() => setSolicitud(prepararSolicitudReserva(seleccion))} />
+          <Text style={styles.seleccionTexto}>Seleccionaste {seleccion.inicio}ï¿½{seleccion.fin}</Text>
+            <BotonCta
+              titulo="Continuar"
+              onPress={() => {
+                const datos = prepararSolicitudReserva(seleccion);
+                if (!datos) return;
+
+                router.push({
+                  pathname: "/confirmar-reserva",
+                  params: {
+                    espacioId: datos.espacioId,
+                    fecha: datos.fecha,
+                    inicio: datos.inicio,
+                    fin: datos.fin,
+                    precio: String(datos.precio),
+                  },
+                });
+              }}
+            />
         </View>}
         {solicitud && <Text style={styles.mensajeReserva}>Turno listo para reservar: {solicitud.fecha}, {solicitud.inicio} a {solicitud.fin} - {solicitud.precio === 0 ? "Gratis" : `${solicitud.precio.toLocaleString("es-AR")}`}</Text>}
         <View style={styles.leyenda}>{(["libre", "reservado", "fijo", "mantenimiento"] as const).map((estadoTurno) => <Text key={estadoTurno} style={styles.leyendaTexto}>- {etiquetas[estadoTurno]}</Text>)}</View>
