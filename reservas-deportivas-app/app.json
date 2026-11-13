@@ -41,7 +41,8 @@
         {
           "locationWhenInUsePermission": "La app usa tu ubicacion para mostrarte los espacios deportivos mas cercanos."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

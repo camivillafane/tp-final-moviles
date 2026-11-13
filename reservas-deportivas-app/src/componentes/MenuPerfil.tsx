@@ -63,7 +63,7 @@ export function MenuPerfil({
                 {
                     etiqueta: "Mis reservas",
                     icono: "calendar-outline",
-                    destino: proximamente("Mis reservas"),
+                    destino: "/mis-reservas",
                 },
                 {
                     etiqueta: "Mis favoritos",
