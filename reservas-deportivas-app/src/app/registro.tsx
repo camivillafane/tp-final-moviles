@@ -1,153 +1,192 @@
-
 import { useState } from "react";
 import {
-    View,
-    Text,
-    TextInput,
-    Pressable,
-    StyleSheet,
-    Alert,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
+import { colores } from "@/constantes/colores";
 import { registrarUsuario } from "@/servicios/autenticacion";
 import { useSesion } from "@/contextos/Sesion";
 
 export default function Registro() {
-    const router = useRouter();
-    const { iniciarSesion } = useSesion();
+  const router = useRouter();
+  const { iniciarSesion } = useSesion();
 
-    const [nombre, setNombre] = useState("");
-    const [email, setEmail] = useState("");
-    const [telefono, setTelefono] = useState("");
-    const [clave, setClave] = useState("");
-    const [cargando, setCargando] = useState(false);
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [clave, setClave] = useState("");
+  const [cargando, setCargando] = useState(false);
 
-    const handleRegistro = async () => {
-        if (!nombre.trim() || !email.trim() || !telefono.trim() || !clave.trim()) {
-        Alert.alert("Atención", "Completá todos los campos.");
-        return;
+  const volver = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/");
+    }
+  };
+
+  const handleRegistro = async () => {
+    if (!nombre.trim() || !email.trim() || !telefono.trim() || !clave.trim()) {
+      Alert.alert("Atención", "Completá todos los campos.");
+      return;
     }
 
     if (clave.length < 6) {
-        Alert.alert("Atención", "La contraseña debe tener al menos 6 caracteres.");
-        return;
+      Alert.alert("Atención", "La contraseña debe tener al menos 6 caracteres.");
+      return;
     }
 
     try {
-        setCargando(true);
+      setCargando(true);
 
-        await registrarUsuario({
-            nombre,
-            email,
-            telefono,
-            clave,
-        });
+      await registrarUsuario({
+        nombre,
+        email,
+        telefono,
+        clave,
+      });
 
-        await iniciarSesion(email.trim().toLowerCase(), clave);
-        router.replace("/");
+      await iniciarSesion(email.trim().toLowerCase(), clave);
+      router.replace("/");
     } catch (error) {
-        Alert.alert(
-            "Error",
-            error instanceof Error ? error.message : "No se pudo crear la cuenta."
-        );
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "No se pudo crear la cuenta."
+      );
     } finally {
-        setCargando(false);
-        }
-    };
+      setCargando(false);
+    }
+  };
 
-    return (
-        <View style={styles.container}>
-        <Text style={styles.titulo}>Reservas Deportivas</Text>
-        <Text style={styles.subtitulo}>Crear cuenta</Text>
+  return (
+    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+      <HeaderInstitucional mostrarVolver onVolverPress={volver} />
+
+      <ScrollView
+        contentContainerStyle={estilos.contenido}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={estilos.titulo}>Reservas Deportivas</Text>
+        <Text style={estilos.subtitulo}>Crear cuenta</Text>
 
         <TextInput
-            style={styles.input}
-            placeholder="Nombre completo"
-            value={nombre}
-            onChangeText={setNombre}
+          style={estilos.input}
+          placeholder="Nombre completo"
+          placeholderTextColor={colores.verdeGrisaceo}
+          value={nombre}
+          onChangeText={setNombre}
         />
 
         <TextInput
-            style={styles.input}
-            placeholder="Correo electrónico"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
+          style={estilos.input}
+          placeholder="Correo electrónico"
+          placeholderTextColor={colores.verdeGrisaceo}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
 
         <TextInput
-            style={styles.input}
-            placeholder="Teléfono"
-            value={telefono}
-            onChangeText={setTelefono}
-            keyboardType="phone-pad"
+          style={estilos.input}
+          placeholder="Teléfono"
+          placeholderTextColor={colores.verdeGrisaceo}
+          value={telefono}
+          onChangeText={setTelefono}
+          keyboardType="phone-pad"
         />
 
         <TextInput
-            style={styles.input}
-            placeholder="Contraseña (mínimo 6 caracteres)"
-            value={clave}
-            onChangeText={setClave}
-            secureTextEntry
+          style={estilos.input}
+          placeholder="Contraseña (mínimo 6 caracteres)"
+          placeholderTextColor={colores.verdeGrisaceo}
+          value={clave}
+          onChangeText={setClave}
+          secureTextEntry
         />
 
         <Pressable
-            style={styles.boton}
-            onPress={handleRegistro}
-            disabled={cargando}
+          style={[estilos.boton, cargando && estilos.botonDeshabilitado]}
+          onPress={handleRegistro}
+          disabled={cargando}
+          accessibilityRole="button"
         >
-            <Text style={styles.textoBoton}>
+          <Text style={estilos.textoBoton}>
             {cargando ? "Creando cuenta..." : "Crear cuenta"}
-            </Text>
+          </Text>
         </Pressable>
 
-        <Pressable onPress={() => router.replace("/login" as any)}>
-            <Text style={styles.enlace}>¿Ya tenés cuenta? Iniciá sesión</Text>
+        <Pressable onPress={() => router.replace("/login")}>
+          <Text style={estilos.enlace}>¿Ya tenés cuenta? Iniciá sesión</Text>
         </Pressable>
-        </View>
-    );
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
-const styles = StyleSheet.create({
-container: {
+const estilos = StyleSheet.create({
+  contenedor: {
+    backgroundColor: colores.fondo,
     flex: 1,
+  },
+  contenido: {
+    flexGrow: 1,
     justifyContent: "center",
     padding: 25,
-    backgroundColor: "#e9e9eb",
-},
-titulo: {
-    fontSize: 28,
-    fontWeight: "bold",
+    paddingBottom: 40,
+  },
+  titulo: {
+    color: colores.textoOscuro,
+    fontSize: 26,
+    fontWeight: "700",
+    marginBottom: 6,
     textAlign: "center",
-    marginBottom: 10,
-},
-subtitulo: {
-    fontSize: 20,
-    textAlign: "center",
-    marginBottom: 30,
-},
-input: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-},
-boton: {
-    backgroundColor: "#3157a4",
-    padding: 16,
-    borderRadius: 10,
-    alignItems: "center",
-},
-textoBoton: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-},
-enlace: {
-    textAlign: "center",
-    marginTop: 22,
-    color: "#3157a4",
+  },
+  subtitulo: {
+    color: colores.verdePrincipal,
+    fontSize: 18,
     fontWeight: "600",
-},
+    marginBottom: 28,
+    textAlign: "center",
+  },
+  input: {
+    backgroundColor: colores.blanco,
+    borderColor: colores.borde,
+    borderRadius: 12,
+    borderWidth: 1,
+    color: colores.textoOscuro,
+    fontSize: 15,
+    marginBottom: 14,
+    padding: 14,
+  },
+  boton: {
+    alignItems: "center",
+    backgroundColor: colores.verdePrincipal,
+    borderRadius: 12,
+    marginTop: 8,
+    padding: 16,
+  },
+  botonDeshabilitado: {
+    opacity: 0.6,
+  },
+  textoBoton: {
+    color: colores.blanco,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  enlace: {
+    color: colores.verdePrincipal,
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 22,
+    textAlign: "center",
+  },
 });
