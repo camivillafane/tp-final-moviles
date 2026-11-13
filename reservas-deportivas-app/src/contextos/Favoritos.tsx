@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { sesionMock } from "@/mocks/sesionUsuario";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { agregarFavorito, listarFavoritos, quitarFavorito } from "@/servicios/favoritos";
+import { useSesion } from "./Sesion";
 
 interface FavoritosContexto {
   favoritos: string[];
@@ -10,24 +11,44 @@ interface FavoritosContexto {
 const FavoritosContext = createContext<FavoritosContexto | null>(null);
 
 export function FavoritosProvider({ children }: { children: ReactNode }) {
-  const [favoritos, setFavoritos] = useState<string[]>(
-    sesionMock?.espaciosFavoritos ?? []
-  );
+  const { usuario } = useSesion();
+  const [favoritos, setFavoritos] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!usuario) {
+      setFavoritos([]);
+      return;
+    }
+
+    listarFavoritos()
+      .then(({ datos }) => setFavoritos(datos.map((espacio) => espacio.id)))
+      .catch(() => setFavoritos([]));
+  }, [usuario]);
 
   const esFavorito = (espacioId: string) => favoritos.includes(espacioId);
 
   const cambiarFavorito = (espacioId: string) => {
+    const yaEstaba = favoritos.includes(espacioId);
+
     setFavoritos((actuales) =>
-      actuales.includes(espacioId)
+      yaEstaba
         ? actuales.filter((id) => id !== espacioId)
         : [...actuales, espacioId]
     );
+
+    const accion = yaEstaba ? quitarFavorito : agregarFavorito;
+
+    accion(espacioId).catch(() => {
+      setFavoritos((actuales) =>
+        yaEstaba
+          ? [...actuales, espacioId]
+          : actuales.filter((id) => id !== espacioId)
+      );
+    });
   };
 
   return (
-    <FavoritosContext.Provider
-      value={{ favoritos, esFavorito, cambiarFavorito }}
-    >
+    <FavoritosContext.Provider value={{ favoritos, esFavorito, cambiarFavorito }}>
       {children}
     </FavoritosContext.Provider>
   );

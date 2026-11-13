@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,16 +7,35 @@ import { EstadoVacio } from "@/componentes/EstadoVacio";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { colores } from "@/constantes/colores";
 import { useFavoritos } from "@/contextos/Favoritos";
-import { espaciosMock } from "@/mocks/espacios";
+import { useSesion } from "@/contextos/Sesion";
+import { listarEspacios } from "@/servicios/espacios";
+import type { Espacio } from "@/tipos/espacio";
 
 export default function Favoritos() {
     const router = useRouter();
+    const { usuario } = useSesion();
     const { favoritos } = useFavoritos();
+    const [todos, setTodos] = useState<Espacio[]>([]);
+
+    useEffect(() => {
+        listarEspacios({ porPagina: 100 })
+            .then(({ datos }) => setTodos(datos))
+            .catch(() => setTodos([]));
+    }, []);
 
     const espaciosFavoritos = useMemo(
-        () => espaciosMock.filter((espacio) => favoritos.includes(espacio.id)),
-        [favoritos]
+        () => todos.filter((espacio) => favoritos.includes(espacio.id)),
+        [todos, favoritos]
     );
+
+    if (!usuario) {
+        return (
+            <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+            <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
+            <EstadoVacio mensaje="Iniciá sesión para ver tus favoritos." />
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>

@@ -62,7 +62,8 @@ export type CodigoError =
     "TURNO_PASADO"
     "ERROR_INTERNO"
     "NO_IMPLEMENTADO"
-    "ALMACEN_NO_DISPONIBLE";
+    "ALMACEN_NO_DISPONIBLE"
+    "ERROR_RED";
 
 export interface Bloqueo {
     id: string;

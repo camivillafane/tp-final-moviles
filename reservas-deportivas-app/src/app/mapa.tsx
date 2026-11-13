@@ -16,7 +16,7 @@ import { EstadoError } from "@/componentes/EstadoError";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { BotonCta } from "@/componentes/BotonCta";
 import { colores } from "@/constantes/colores";
-import { getEspacios } from "@/servicios/espacios";
+import { listarEspacios } from "@/servicios/espacios";
 import IonIcons from "@react-native-vector-icons/ionicons";
 
 const COORDENADAS_VILLAGUAY: Region = {
@@ -45,7 +45,7 @@ export default function Mapa() {
     setError(null);
 
     try {
-      const datos = await getEspacios();
+      const { datos } = await listarEspacios();
       setEspacios(datos);
       setEstado("success");
     } catch (e) {
