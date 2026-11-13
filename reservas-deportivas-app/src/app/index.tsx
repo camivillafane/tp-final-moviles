@@ -218,8 +218,8 @@ export default function Home() {
         visible={menuPerfilVisible}
         usuario={usuario}
         onCerrar={() => setMenuPerfilVisible(false)}
-        onCerrarSesion={() => {
-          cerrarSesion();
+        onCerrarSesion={async() => {
+          await cerrarSesion();
           setMenuPerfilVisible(false);
         }}
       />

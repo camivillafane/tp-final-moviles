@@ -1,29 +1,28 @@
+import * as SecureStore from "expo-secure-store";
 import type { Usuario } from "@/tipos/usuario";
-import { sesionMock } from "@/mocks/sesionUsuario";
-import { USAR_MOCKS } from "./config";
-import { getUno } from "./cliente";
-import { ErrorServicio } from "./errores";
-import { respuestaMock } from "./mock";
 
-// La API puede devolver "administrador". La app solo maneja dos roles,
-// así que lo tratamos como encargado.
-type UsuarioApi = Omit<Usuario, "rol"> & { rol: string };
+const CLAVE_SESION = "usuario_sesion";
 
-export async function getSesion(): Promise<Usuario | null> {
-  if (USAR_MOCKS) {
-    return respuestaMock(sesionMock, 0);
-  }
+export async function guardarSesion(usuario: Usuario): Promise<void> {
+    await SecureStore.setItemAsync(
+        CLAVE_SESION,
+        JSON.stringify(usuario)
+    );
+}
 
-  try {
-    const api = await getUno<UsuarioApi>("/yo");
-    return {
-      ...api,
-      rol: api.rol === "jugador" ? "jugador" : "encargado",
-    };
-  } catch (error) {
-    if (error instanceof ErrorServicio && error.codigo === "NO_AUTENTICADO") {
-      return null;
+export async function recuperarSesion(): Promise<Usuario | null> {
+    const datos = await SecureStore.getItemAsync(CLAVE_SESION);
+
+    if (!datos) return null;
+
+    try {
+        return JSON.parse(datos) as Usuario;
+    } catch {
+        await SecureStore.deleteItemAsync(CLAVE_SESION);
+        return null;
     }
-    throw error;
-  }
+}
+
+export async function eliminarSesion(): Promise<void> {
+    await SecureStore.deleteItemAsync(CLAVE_SESION);
 }

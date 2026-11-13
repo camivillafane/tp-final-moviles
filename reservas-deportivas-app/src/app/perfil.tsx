@@ -1,8 +1,18 @@
-import type { ComponentProps } from "react";
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { useState, type ComponentProps } from "react";
+import {
+    ScrollView,
+    View,
+    Text,
+    StyleSheet,
+    Alert,
+    Pressable,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
+import * as LocalAuthentication from "expo-local-authentication";
+import * as SecureStore from "expo-secure-store";
+
 import { AvatarUsuario } from "@/componentes/AvatarUsuario";
 import { EstadoVacio } from "@/componentes/EstadoVacio";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
@@ -14,45 +24,102 @@ export default function Perfil() {
     const router = useRouter();
     const { usuario } = useSesion();
 
+    const [biometriaActiva, setBiometriaActiva] = useState(false);
+
+    const activarBiometria = async () => {
+        try {
+            const disponible = await LocalAuthentication.hasHardwareAsync();
+            const registrado = await LocalAuthentication.isEnrolledAsync();
+
+            if (!disponible || !registrado) {
+                Alert.alert(
+                    "No disponible",
+                    "Tu dispositivo no tiene biometría configurada."
+                );
+                return;
+            }
+
+            const resultado = await LocalAuthentication.authenticateAsync({
+                promptMessage: "Confirmá tu identidad",
+            });
+
+            if (resultado.success && usuario) {
+                await SecureStore.setItemAsync("biometria_activa", "true");
+                await SecureStore.setItemAsync(
+                    "usuario_biometrico",
+                    JSON.stringify(usuario)
+                );
+
+                setBiometriaActiva(true);
+                Alert.alert("¡Listo!", "Acceso biométrico activado.");
+            }
+        } catch {
+            Alert.alert("Error", "No se pudo activar el acceso biométrico.");
+        }
+    };
+
     if (!usuario) {
         return (
-            <SafeAreaView style={estilos.contenedor} edges={["top","bottom"]}>
-                <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
+            <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+                <HeaderInstitucional
+                    mostrarVolver
+                    onVolverPress={() => router.back()}
+                />
                 <EstadoVacio mensaje="No hay sesión activa" />
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={estilos.contenedor} edges={["top","bottom"]}>
-            <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
+        <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+            <HeaderInstitucional
+                mostrarVolver
+                onVolverPress={() => router.back()}
+            />
+
             <ScrollView
                 contentContainerStyle={estilos.contenido}
                 showsVerticalScrollIndicator={false}
             >
-                <View style = {estilos.card}>
-                    <AvatarUsuario nombre = {usuario.nombre} tamaño={80} />
+                <View style={estilos.card}>
+                    <AvatarUsuario nombre={usuario.nombre} tamaño={80} />
                     <Text style={estilos.nombre}>{usuario.nombre}</Text>
+
                     <View style={estilos.chipRol}>
                         <Text style={estilos.chipTexto}>
-                        {roles[usuario.rol]}
+                            {roles[usuario.rol]}
                         </Text>
                     </View>
                 </View>
+
                 <Text style={estilos.titulo}>Información de contacto</Text>
+
                 <View style={estilos.cardDatos}>
                     <Fila
                         icono="mail-outline"
                         etiqueta="Email"
                         valor={usuario.email}
                     />
+
                     <View style={estilos.separador} />
+
                     <Fila
                         icono="call-outline"
                         etiqueta="Teléfono"
                         valor={usuario.telefono}
                     />
                 </View>
+
+                <Pressable
+                    style={estilos.botonBiometria}
+                    onPress={activarBiometria}
+                >
+                    <Text style={estilos.textoBoton}>
+                        {biometriaActiva
+                            ? "Acceso biométrico activado"
+                            : "Activar acceso biométrico"}
+                    </Text>
+                </Pressable>
             </ScrollView>
         </SafeAreaView>
     );
@@ -67,7 +134,11 @@ interface FilaProps {
 function Fila({ icono, etiqueta, valor }: FilaProps) {
     return (
         <View style={estilos.fila}>
-            <IonIcons name={icono} size={20} color={colores.verdePrincipal} />
+            <IonIcons
+                name={icono}
+                size={20}
+                color={colores.verdePrincipal}
+            />
             <Text style={estilos.etiqueta}>{etiqueta}</Text>
             <Text style={estilos.valor}>{valor}</Text>
         </View>
@@ -144,5 +215,17 @@ const estilos = StyleSheet.create({
     separador: {
         backgroundColor: colores.borde,
         height: 1,
+    },
+    botonBiometria: {
+        backgroundColor: colores.verdePrincipal,
+        padding: 16,
+        borderRadius: 8,
+        alignItems: "center",
+        marginTop: 20,
+    },
+    textoBoton: {
+        color: colores.blanco,
+        fontSize: 16,
+        fontWeight: "bold",
     },
 });
