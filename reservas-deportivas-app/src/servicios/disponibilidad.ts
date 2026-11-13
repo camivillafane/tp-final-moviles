@@ -1,6 +1,6 @@
 import { diasBloqueadosMock, reservasFijasMock, reservasMock } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
-import { DiaBloqueado, ReservaFija, SolicitudReserva, Turno } from "@/tipos/turno";
+import { DiaBloqueado, ReservaFija, TurnoSeleccionado, Turno } from "@/tipos/turno";
 
 const HORA_APERTURA = 8 * 60;
 const HORA_CIERRE = 24 * 60;
@@ -77,7 +77,7 @@ export async function getDisponibilidad(espacioId: string, fecha: string): Promi
   });
 }
 
-export function prepararSolicitudReserva(turno: Turno): SolicitudReserva | null {
+export function prepararSolicitudReserva(turno: Turno): TurnoSeleccionado | null {
   if (turno.estado !== "libre") return null;
   const ahora = new Date();
   const hoy = fechaLocal(ahora);
