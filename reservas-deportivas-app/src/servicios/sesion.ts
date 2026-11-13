@@ -1,4 +1,3 @@
-
 import * as SecureStore from "expo-secure-store";
 import type { Usuario } from "@/tipos/usuario";
 
@@ -17,10 +16,10 @@ export async function recuperarSesion(): Promise<Usuario | null> {
     if (!datos) return null;
 
     try {
-    return JSON.parse(datos) as Usuario;
+        return JSON.parse(datos) as Usuario;
     } catch {
-    await SecureStore.deleteItemAsync(CLAVE_SESION);
-    return null;
+        await SecureStore.deleteItemAsync(CLAVE_SESION);
+        return null;
     }
 }
 
