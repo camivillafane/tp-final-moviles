@@ -36,6 +36,21 @@ export const inicializarBaseDeDatos = async () => {
       usuarioId TEXT NOT NULL
     );
   `);
+
+  await db.execAsync(`
+  CREATE TABLE IF NOT EXISTS usuarios_locales (
+    id TEXT PRIMARY KEY NOT NULL,
+    nombre TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    telefono TEXT NOT NULL,
+    claveHash TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    rol TEXT NOT NULL,
+    espaciosFavoritos TEXT NOT NULL DEFAULT '[]',
+    cancelacionesTardias INTEGER NOT NULL DEFAULT 0,
+    ausencias INTEGER NOT NULL DEFAULT 0
+  );
+`);
 };
 
 
@@ -43,7 +58,7 @@ export const guardarReservaLocal = async (reserva: Reserva): Promise<void> => {
   const db = await abrirBaseDeDatos();
   await db.runAsync(
     `INSERT OR REPLACE INTO reservas_locales (id, usuarioId, espacioId, fecha, inicio, fin, cantidadPersonas, precioPorHora, precioTotal, estado, qrToken, creadaEn, canceladaEn) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     [
       reserva.id,
       reserva.usuarioId,
