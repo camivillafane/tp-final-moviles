@@ -12,10 +12,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { espaciosMock } from "@/mocks/espacios";
 import { crearReserva } from "@/servicios/reservas";
 import { guardarReservaLocal } from "@/servicios/dbServicios";
+import { useSesion } from "@/contextos/Sesion";
 
 export default function ConfirmarReservaPantalla() {
   const router = useRouter();
-  
+  const { usuario } = useSesion();
   const params = useLocalSearchParams<{
     espacioId: string;
     fecha: string;
@@ -36,7 +37,7 @@ export default function ConfirmarReservaPantalla() {
     );
   }
 
-  // Cálculo del precio total
+  
   const [horaInicio] = (params.inicio || "00:00").split(":").map(Number);
   const [horaFin] = (params.fin || "00:00").split(":").map(Number);
   const duracionHoras = Math.max(1, horaFin - horaInicio);
@@ -56,20 +57,25 @@ export default function ConfirmarReservaPantalla() {
 
   const handleConfirmar = async () => {
     try {
-      setCargando(true);
+  setCargando(true);
 
-      
-      const nuevaReserva = crearReserva({
-        espacioId: espacio.id,
-        fecha: params.fecha || "",
-        inicio: params.inicio || "",
-        fin: params.fin || "",
-        precio: precioTotal,
-        cantidadPersonas,
-      });
+  if (!usuario) {
+    throw new Error("Debés iniciar sesión para reservar.");
+  }
 
-      
-      await guardarReservaLocal(nuevaReserva);
+  const nuevaReserva = await crearReserva(
+    {
+      espacioId: espacio.id,
+      fecha: params.fecha || "",
+      inicio: params.inicio || "",
+      fin: params.fin || "",
+      precio: precioTotal,
+      cantidadPersonas,
+    },
+    usuario.id
+  );
+
+  await guardarReservaLocal(nuevaReserva);
 
       Alert.alert(
         "¡Reserva confirmada!",

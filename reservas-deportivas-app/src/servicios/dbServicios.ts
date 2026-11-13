@@ -103,6 +103,67 @@ export const obtenerReservasLocales = async (usuarioId: string): Promise<Reserva
   }));
 };
 
+export const obtenerReservaLocal = async (
+  reservaId: string,
+  usuarioId: string
+): Promise<Reserva | null> => {
+  const db = await abrirBaseDeDatos();
+
+  const reserva = await db.getFirstAsync<Reserva>(
+    `SELECT *
+     FROM reservas_locales
+     WHERE id = ? AND usuarioId = ?
+     LIMIT 1;`,
+    [reservaId, usuarioId]
+  );
+
+  return reserva ?? null;
+};
+
+
+export const contarReservasActivasLocales = async (
+  usuarioId: string
+): Promise<number> => {
+  const db = await abrirBaseDeDatos();
+
+  const resultado = await db.getFirstAsync<{ cantidad: number }>(
+    `SELECT COUNT(*) AS cantidad
+     FROM reservas_locales
+     WHERE usuarioId = ? AND estado = 'confirmada';`,
+    [usuarioId]
+  );
+
+  return resultado?.cantidad ?? 0;
+};
+
+export const cancelarReservaLocal = async (
+  reservaId: string,
+  usuarioId: string
+): Promise<void> => {
+  const db = await abrirBaseDeDatos();
+
+  const reserva = await db.getFirstAsync<{ estado: string }>(
+    `SELECT estado
+     FROM reservas_locales
+     WHERE id = ? AND usuarioId = ?;`,
+    [reservaId, usuarioId]
+  );
+
+  if (!reserva) {
+    throw new Error("No se encontró la reserva.");
+  }
+
+  if (reserva.estado !== "confirmada") {
+    throw new Error("La reserva ya está cancelada.");
+  }
+
+  await db.runAsync(
+    `UPDATE reservas_locales
+     SET estado = ?, canceladaEn = ?
+     WHERE id = ? AND usuarioId = ?;`,
+    ["cancelada", new Date().toISOString(), reservaId, usuarioId]
+  );
+};
 
 export const actualizarEstadoReservaLocal = async (reservaId: string, nuevoEstado: string): Promise<void> => {
   const db = await abrirBaseDeDatos();
