@@ -9,9 +9,10 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { obtenerReservasLocales } from "@/servicios/dbServicios";
-import { cancelarReserva } from "@/servicios/reservas";
-import { actualizarEstadoReservaLocal } from "@/servicios/dbServicios"; 
+import {
+  obtenerReservasLocales,
+  cancelarReservaLocal,
+} from "@/servicios/dbServicios";
 import { espaciosMock } from "@/mocks/espacios";
 import type { Reserva } from "@/tipos/reserva";
 import { useSesion } from "@/contextos/Sesion";
@@ -19,21 +20,21 @@ import { useSesion } from "@/contextos/Sesion";
 export default function MisReservasPantalla() {
   const router = useRouter();
   const { usuario } = useSesion();
+  const usuarioId = usuario?.id;
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [cargando, setCargando] = useState(true);
 
 
-  const cargarReservas = async () => {
+  const cargarReservas = useCallback(async () => {
   try {
     setCargando(true);
 
-    if (!usuario) {
+    if (!usuarioId) {
       setReservas([]);
       return;
     }
 
-    const data = await obtenerReservasLocales(usuario.id);
-    console.log("Reservas cargadas en pantalla:", data);
+    const data = await obtenerReservasLocales(usuarioId);
     setReservas(data);
   } catch (error) {
     console.error("Error al cargar reservas locales:", error);
@@ -41,14 +42,13 @@ export default function MisReservasPantalla() {
   } finally {
     setCargando(false);
   }
-};
-
+}, [usuarioId]);
 
   useFocusEffect(
-    useCallback(() => {
-      cargarReservas();
-    }, [usuario?.id])
-  );
+  useCallback(() => {
+    cargarReservas();
+  }, [cargarReservas])
+);
 
   const handleCancelar = async (reservaId: string) => {
     Alert.alert(
@@ -61,8 +61,10 @@ export default function MisReservasPantalla() {
           style: "destructive",
           onPress: async () => {
             try {
-              cancelarReserva(reservaId);
-              await actualizarEstadoReservaLocal(reservaId, "cancelada");
+              if (!usuario) {
+                throw new Error("Debés iniciar sesión para cancelar.");
+}
+              await cancelarReservaLocal(reservaId, usuario.id);
               await cargarReservas();
               Alert.alert("Éxito", "La reserva ha sido cancelada.");
             } catch (error: any) {

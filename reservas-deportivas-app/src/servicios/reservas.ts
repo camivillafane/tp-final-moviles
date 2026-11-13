@@ -7,10 +7,9 @@ import {
   diasBloqueadosMock,
 } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
-import { sesionMock } from "@/mocks/sesionUsuario"; 
+import { contarReservasActivasLocales } from "@/servicios/dbServicios";
 
 
-// --- FUNCIONES AUXILIARES DE SOPORTE ---
 
 const generarId = (): string => {
   return `res-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -39,21 +38,24 @@ const calcularDuracion = (inicio: string, fin: string): number => {
   return (minutosTotalesFin - minutosTotalesInicio) / 60;
 };
 
-// --- 1. CREAR RESERVA ---
 
-export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
-  // 1. Validar sesión iniciada
-  if (!sesionMock) {
+export const crearReserva = async (
+  solicitud: SolicitudReserva,
+  usuarioId: string
+): Promise<Reserva> => {
+
+
+  if (!usuarioId) {
     throw new Error("Debés iniciar sesión para reservar.");
   }
 
-  // 2. Buscar el espacio solicitado
+
   const espacio = espaciosMock.find((item) => item.id === solicitud.espacioId);
   if (!espacio || !espacio.activo) {
     throw new Error("El espacio no existe o no está disponible.");
   }
 
-  // 3. Validar cantidad de personas vs capacidad
+
   if (
     !Number.isInteger(solicitud.cantidadPersonas) ||
     solicitud.cantidadPersonas < 1 ||
@@ -64,13 +66,13 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     );
   }
 
-  // 4. Validar horario y duración
+
   const duracion = calcularDuracion(solicitud.inicio, solicitud.fin);
   if (!Number.isFinite(duracion) || duracion <= 0) {
     throw new Error("El horario seleccionado no es válido.");
   }
 
-  // 5. Validar que el día no esté bloqueado (mantenimiento/lluvia)
+
   const diaBloqueado = diasBloqueadosMock.some(
     (dia) =>
       dia.espacioId === solicitud.espacioId && dia.fecha === solicitud.fecha
@@ -79,7 +81,7 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     throw new Error("El espacio está bloqueado para esa fecha.");
   }
 
-  // 6. Validar superposición con turnos ocupados
+
   const turnoOcupado = reservasMock.some(
     (turno) =>
       turno.espacioId === solicitud.espacioId &&
@@ -96,7 +98,7 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     throw new Error("El horario seleccionado ya está ocupado.");
   }
 
-  // 7. Validar reservas fijas institucionales
+
   const fechaSeleccionada = new Date(`${solicitud.fecha}T12:00:00`);
   const diaSemana = fechaSeleccionada.getDay();
 
@@ -121,23 +123,22 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     throw new Error("El horario coincide con una reserva fija.");
   }
 
-  // 8. Validar máximo de 3 reservas activas por usuario
-  if (
-    reservasEjemplo.filter(
-      (reserva) =>
-        reserva.usuarioId === sesionMock!.id && reserva.estado === "confirmada"
-    ).length >= 3
-  ) {
-    throw new Error("No podés tener más de 3 reservas activas.");
-  }
-  // 9. Calcular precio total de forma segura
+
+  const cantidadReservasActivas =
+  await contarReservasActivasLocales(usuarioId);
+
+if (cantidadReservasActivas >= 3) {
+  throw new Error("No podés tener más de 3 reservas activas.");
+}
+
+
   const precioPorHora = espacio.precioPorHora;
   const precioTotal = precioPorHora * duracion;
 
-  // 10. Construir el objeto de la nueva reserva
+
   const nuevaReserva: Reserva = {
     id: generarId(),
-    usuarioId: sesionMock!.id,
+    usuarioId,
     espacioId: espacio.id,
     fecha: solicitud.fecha,
     inicio: solicitud.inicio,
@@ -151,10 +152,10 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     canceladaEn: null,
   };
 
-  // 11. Guardar en el arreglo de reservas
+
   reservasEjemplo.push(nuevaReserva);
 
-  // 12. Registrar el turno como ocupado en la disponibilidad
+
   const nuevoTurno: Turno = {
     id: `turno-${nuevaReserva.id}`,
     espacioId: espacio.id,
@@ -171,7 +172,6 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
   return nuevaReserva;
 };
 
-// --- 2. CANCELAR RESERVA ---
 
 export const cancelarReserva = (reservaId: string): Reserva => {
   const reserva = reservasEjemplo.find((item) => item.id === reservaId);
