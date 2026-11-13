@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,71 +8,79 @@ import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { colores } from "@/constantes/colores";
 import { useFavoritos } from "@/contextos/Favoritos";
 import { useSesion } from "@/contextos/Sesion";
-import { espaciosMock } from "@/mocks/espacios";
+import { listarEspacios } from "@/servicios/espacios";
+import type { Espacio } from "@/tipos/espacio";
 
 export default function Favoritos() {
-  const router = useRouter();
-  const { usuario } = useSesion();
-  const { favoritos } = useFavoritos();
+    const router = useRouter();
+    const { usuario } = useSesion();
+    const { favoritos } = useFavoritos();
+    const [todos, setTodos] = useState<Espacio[]>([]);
 
-  const espaciosFavoritos = useMemo(
-    () => espaciosMock.filter((espacio) => favoritos.includes(espacio.id)),
-    [favoritos]
-  );
+    useEffect(() => {
+        listarEspacios({ porPagina: 100 })
+            .then(({ datos }) => setTodos(datos))
+            .catch(() => setTodos([]));
+    }, []);
 
-  if (!usuario) {
-    return (
-      <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
-        <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
-        <EstadoVacio mensaje="Iniciá sesión para ver tus favoritos." />
-      </SafeAreaView>
+    const espaciosFavoritos = useMemo(
+        () => todos.filter((espacio) => favoritos.includes(espacio.id)),
+        [todos, favoritos]
     );
-  }
 
-  return (
-    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
-      <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
+    if (!usuario) {
+        return (
+            <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+            <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
+            <EstadoVacio mensaje="Iniciá sesión para ver tus favoritos." />
+            </SafeAreaView>
+        );
+    }
 
-      <ScrollView
-        contentContainerStyle={estilos.contenido}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={estilos.titulo}>Mis favoritos</Text>
+    return (
+        <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+        <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
 
-        {espaciosFavoritos.length === 0 ? (
-          <EstadoVacio mensaje="Todavía no guardaste ningún espacio." />
-        ) : (
-          espaciosFavoritos.map((espacio) => (
-            <CardEspacio
-              key={espacio.id}
-              espacio={espacio}
-              onVerDetalle={() =>
-                router.push({
-                  pathname: "/espacio/[id]",
-                  params: { id: espacio.id },
-                })
-              }
-            />
-          ))
+        <ScrollView
+            contentContainerStyle={estilos.contenido}
+            showsVerticalScrollIndicator={false}
+        >
+            <Text style={estilos.titulo}>Mis favoritos</Text>
+
+            {espaciosFavoritos.length === 0 ? (
+            <EstadoVacio mensaje="Todavía no guardaste ningún espacio." />
+            ) : (
+            espaciosFavoritos.map((espacio) => (
+                <CardEspacio
+                key={espacio.id}
+                espacio={espacio}
+                onVerDetalle={() =>
+                    router.push({
+                    pathname: "/espacio/[id]",
+                    params: { id: espacio.id },
+                    })
+                }
+                />
+            ))
         )}
-      </ScrollView>
+        </ScrollView>
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
-  contenedor: {
-    backgroundColor: colores.fondo,
-    flex: 1,
-  },
-  contenido: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  titulo: {
-    color: colores.textoOscuro,
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
+    contenedor: {
+        backgroundColor: colores.fondo,
+        flex: 1,
+    },
+    contenido: {
+        padding: 16,
+        paddingBottom: 32,
+    },
+    titulo: {
+        color: colores.textoOscuro,
+        fontSize: 22,
+        fontWeight: "700",
+        marginBottom: 16,
+    },
 });

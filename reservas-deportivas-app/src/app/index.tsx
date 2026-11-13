@@ -18,8 +18,8 @@ import { ChipDisciplina } from "@/componentes/ChipDisciplina";
 import { ChipFiltro } from "@/componentes/ChipFiltro";
 import { CardEspacio } from "@/componentes/CardEspacio";
 import { colores } from "@/constantes/colores";
-import { getEspacios } from "@/servicios/espacios";
-import { deportesMock } from "@/mocks/deportes";
+import { listarEspacios } from "@/servicios/espacios";
+import { listarDeportes } from "@/servicios/deportes";
 import { MenuPerfil } from "@/componentes/MenuPerfil";
 import { useSesion } from "@/contextos/Sesion";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,14 +33,16 @@ export default function Home() {
   const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const deportes = useMemo<Deporte[]>(() => {
+  const [deportes, setDeportes] = useState<Deporte[]>([]);
+
+  const deportesVisibles = useMemo<Deporte[]>(() => {
     const idsConEspacios = new Set(
       espacios
         .filter((espacio) => espacio.activo)
         .map((espacio) => espacio.deporteId)
     );
-    return deportesMock.filter((deporte) => idsConEspacios.has(deporte.id));
-  }, [espacios]);
+    return deportes.filter((deporte) => idsConEspacios.has(deporte.id));
+  }, [deportes, espacios]);
 
   const [deporteSeleccionado, setDeporteSeleccionado] = useState<string | null>(null);
   const [complejoSeleccionado, setComplejoSeleccionado] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export default function Home() {
     setError(null);
 
     try {
-      const datos = await getEspacios();
+      const { datos } = await listarEspacios();
       setEspacios(datos);
       setEstado("success");
     } catch (e) {
@@ -59,6 +61,12 @@ export default function Home() {
       setEstado("error");
     }
   };
+
+  useEffect(() => {
+    listarDeportes()
+      .then(({ datos }) => setDeportes(datos))
+      .catch(() => setDeportes([]));
+  }, []);
 
   useEffect(() => {
     cargarEspacios();
@@ -69,7 +77,7 @@ export default function Home() {
   const refrescar = async () => {
     setRefrescando(true);
     try {
-      const datos = await getEspacios();
+      const { datos } = await listarEspacios();
       setEspacios(datos);
     } catch {
       setError("No se pudieron cargar los espacios. Intentalo nuevamente.");
@@ -147,7 +155,7 @@ export default function Home() {
             seleccionado={deporteSeleccionado === null}
             onPress={() => setDeporteSeleccionado(null)}
           />
-          {deportes.map((deporte) => (
+          {deportesVisibles.map((deporte) => (
             <ChipDisciplina
               key={deporte.id}
               deporte={deporte}
@@ -210,8 +218,8 @@ export default function Home() {
         visible={menuPerfilVisible}
         usuario={usuario}
         onCerrar={() => setMenuPerfilVisible(false)}
-        onCerrarSesion={() => {
-          cerrarSesion();
+        onCerrarSesion={async() => {
+          await cerrarSesion();
           setMenuPerfilVisible(false);
         }}
       />

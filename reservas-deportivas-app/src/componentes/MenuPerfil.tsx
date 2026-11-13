@@ -43,12 +43,12 @@ export function MenuPerfil({
             {
                 etiqueta: "Iniciar sesión",
                 icono: "log-in-outline",
-                destino: proximamente("Iniciar sesión"),
+                destino: "/login" as any
             },
             {
                 etiqueta: "Crear cuenta",
                 icono: "person-add-outline",
-                destino: proximamente("Crear cuenta"),
+                destino: "/registro" as any
             }
         );
     } else {
@@ -63,7 +63,7 @@ export function MenuPerfil({
                 {
                     etiqueta: "Mis reservas",
                     icono: "calendar-outline",
-                    destino: proximamente("Mis reservas"),
+                    destino: "/mis-reservas",
                 },
                 {
                     etiqueta: "Mis favoritos",

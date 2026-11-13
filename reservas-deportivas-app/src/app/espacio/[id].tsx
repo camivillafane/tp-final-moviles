@@ -19,19 +19,21 @@ import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { BotonCta } from "@/componentes/BotonCta";
 import { colores } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
-import { deportesMock } from "@/mocks/deportes";
+import { listarDeportes } from "@/servicios/deportes";
 import { VideoEspacio } from "@/componentes/VideoEspacio";
 import IonIcons from "@react-native-vector-icons/ionicons";
 import { useFavoritos } from "@/contextos/Favoritos";
 import { useSesion } from "@/contextos/Sesion";
+import type { Deporte } from "@/tipos/deporte";
 
 export default function DetalleEspacio() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { esFavorito, cambiarFavorito }=useFavoritos();
   const { usuario } = useSesion();
-  const { esFavorito, alternarFavorito } = useFavoritos();
 
   const [espacio, setEspacio] = useState<Espacio | null>(null);
+  const [deportes, setDeportes] = useState<Deporte[]>([]);
   const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +65,12 @@ export default function DetalleEspacio() {
   };
 
   useEffect(() => {
+    listarDeportes()
+      .then(({ datos }) => setDeportes(datos))
+      .catch(() => setDeportes([]));
+  }, []);
+
+  useEffect(() => {
     cargarEspacio();
   }, [id]);
 
@@ -78,8 +86,8 @@ export default function DetalleEspacio() {
     return <EstadoError mensaje="El espacio no existe." />;
   }
 
-  const deporte = deportesMock.find((d) => d.id === espacio?.deporteId);
-  const favorito = esFavorito(espacio.id);
+  const deporte= deportes.find((d) => d.id === espacio?.deporteId);
+  const favorito= esFavorito(espacio.id);
 
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
@@ -91,24 +99,22 @@ export default function DetalleEspacio() {
           <Text style={estilos.complejo}>{espacio.complejo}</Text>
           <Text style={estilos.deporte}>{deporte?.nombre}</Text>
           <View style={estilos.filaNombre}>
-            <Text style={estilos.nombre}>{espacio.nombre}</Text>
-            {usuario && (
-              <Pressable
-                style={estilos.botonFavorito}
-                onPress={() => alternarFavorito(espacio.id)}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  favorito ? "Quitar de favoritos" : "Agregar a favoritos"
-                }
-              >
-                <IonIcons
-                  name={favorito ? "heart" : "heart-outline"}
-                  size={28}
-                  color={colores.magentaPrincipal}
-                />
-              </Pressable>
-            )}
-          </View>
+          <Text style={estilos.nombre}>{espacio.nombre}</Text>
+          {usuario && (
+            <Pressable
+              style={estilos.botonFavorito}
+              onPress={() => cambiarFavorito(espacio.id)}
+              accessibilityRole="button"
+              accessibilityLabel={favorito ? "Quitar de favoritos" : "Agregar a favoritos"}
+            >
+              <IonIcons
+                name={favorito ? "heart" : "heart-outline"}
+                size={28}
+                color={colores.magentaPrincipal}
+              />
+            </Pressable>
+          )}
+        </View>
 
           {!espacio.activo && (
             <View style={estilos.badgeInactivo}>

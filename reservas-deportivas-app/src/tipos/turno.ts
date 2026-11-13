@@ -29,10 +29,15 @@ export interface DiaBloqueado {
   motivo: string;
 }
 
-export interface SolicitudReserva {
+export interface TurnoSeleccionado {
   espacioId: string;
   fecha: string;
   inicio: string;
   fin: string;
   precio: number;
 }
+
+export interface SolicitudReserva extends TurnoSeleccionado {
+  cantidadPersonas: number;
+}
+
