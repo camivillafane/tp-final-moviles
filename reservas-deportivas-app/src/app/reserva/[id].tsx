@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSesion } from "@/contextos/Sesion";
 import { obtenerReservaLocal } from "@/servicios/dbServicios";
 import type { Reserva } from "@/tipos/reserva";
+import { espaciosMock } from "@/mocks/espacios"; 
 
 export default function DetalleReservaPantalla() {
   const router = useRouter();
@@ -21,6 +22,9 @@ export default function DetalleReservaPantalla() {
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const espacio = reserva
+  ? espaciosMock.find((item) => item.id === reserva.espacioId)
+  : undefined;
 
   useEffect(() => {
     let desmontado = false;
@@ -73,7 +77,9 @@ export default function DetalleReservaPantalla() {
             <Text style={estilos.estado}>
               Estado: {reserva.estado === "confirmada" ? "Confirmada" : "Cancelada"}
             </Text>
-            <Text style={estilos.dato}>Espacio: {reserva.espacioId}</Text>
+            <Text style={estilos.dato}>
+                Espacio: {espacio?.nombre ?? reserva.espacioId}
+            </Text>
             <Text style={estilos.dato}>Fecha: {reserva.fecha}</Text>
             <Text style={estilos.dato}>
               Horario: {reserva.inicio} a {reserva.fin} hs

@@ -12,23 +12,26 @@ const FavoritosContext = createContext<FavoritosContexto | null>(null);
 
 export function FavoritosProvider({ children }: { children: ReactNode }) {
   const { usuario } = useSesion();
+  const usuarioId = usuario?.id;
   const [favoritos, setFavoritos] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (!usuario) {
-      setFavoritos([]);
-      return;
-    }
+    useEffect(() => {
+    if (!usuarioId) return;
 
-    listarFavoritos()
+    listarFavoritos(usuarioId)
       .then(({ datos }) => setFavoritos(datos.map((espacio) => espacio.id)))
       .catch(() => setFavoritos([]));
-  }, [usuario]);
+  }, [usuarioId]);
 
-  const esFavorito = (espacioId: string) => favoritos.includes(espacioId);
+  const favoritosVisibles = usuarioId ? favoritos : [];
+
+  const esFavorito = (espacioId: string) =>
+    favoritosVisibles.includes(espacioId);
 
   const cambiarFavorito = (espacioId: string) => {
-    const yaEstaba = favoritos.includes(espacioId);
+  if (!usuarioId) return;
+
+  const yaEstaba = favoritos.includes(espacioId);
 
     setFavoritos((actuales) =>
       yaEstaba
@@ -38,7 +41,7 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
 
     const accion = yaEstaba ? quitarFavorito : agregarFavorito;
 
-    accion(espacioId).catch(() => {
+    accion(usuarioId, espacioId).catch(() => {
       setFavoritos((actuales) =>
         yaEstaba
           ? [...actuales, espacioId]
@@ -48,7 +51,7 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <FavoritosContext.Provider value={{ favoritos, esFavorito, cambiarFavorito }}>
+    <FavoritosContext.Provider value={{ favoritos: favoritosVisibles, esFavorito, cambiarFavorito }}>
       {children}
     </FavoritosContext.Provider>
   );

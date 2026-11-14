@@ -38,6 +38,14 @@ export const inicializarBaseDeDatos = async () => {
   `);
 
   await db.execAsync(`
+  CREATE TABLE IF NOT EXISTS favoritos_usuario_locales (
+    usuarioId TEXT NOT NULL,
+    espacioId TEXT NOT NULL,
+    PRIMARY KEY (usuarioId, espacioId)
+  );
+`);
+
+  await db.execAsync(`
   CREATE TABLE IF NOT EXISTS usuarios_locales (
     id TEXT PRIMARY KEY NOT NULL,
     nombre TEXT NOT NULL,
@@ -53,6 +61,46 @@ export const inicializarBaseDeDatos = async () => {
 `);
 };
 
+export const obtenerFavoritosLocales = async (
+  usuarioId: string
+): Promise<string[]> => {
+  const db = await abrirBaseDeDatos();
+
+  const filas = await db.getAllAsync<{ espacioId: string }>(
+    `SELECT espacioId
+     FROM favoritos_usuario_locales
+     WHERE usuarioId = ?;`,
+    [usuarioId]
+  );
+
+  return filas.map((fila) => fila.espacioId);
+};
+
+export const guardarFavoritoLocal = async (
+  usuarioId: string,
+  espacioId: string
+): Promise<void> => {
+  const db = await abrirBaseDeDatos();
+
+  await db.runAsync(
+    `INSERT OR IGNORE INTO favoritos_usuario_locales (usuarioId, espacioId)
+     VALUES (?, ?);`,
+    [usuarioId, espacioId]
+  );
+};
+
+export const eliminarFavoritoLocal = async (
+  usuarioId: string,
+  espacioId: string
+): Promise<void> => {
+  const db = await abrirBaseDeDatos();
+
+  await db.runAsync(
+    `DELETE FROM favoritos_usuario_locales
+     WHERE usuarioId = ? AND espacioId = ?;`,
+    [usuarioId, espacioId]
+  );
+};
 
 export const guardarReservaLocal = async (reserva: Reserva): Promise<void> => {
   const db = await abrirBaseDeDatos();
