@@ -16,6 +16,8 @@ import {
 import { espaciosMock } from "@/mocks/espacios";
 import type { Reserva } from "@/tipos/reserva";
 import { useSesion } from "@/contextos/Sesion";
+import { EstadoConexion } from "@/componentes/EstadoConexion";
+
 
 export default function MisReservasPantalla() {
   const router = useRouter();
@@ -114,6 +116,18 @@ export default function MisReservasPantalla() {
           Total: ${item.precioTotal.toLocaleString()}
         </Text>
 
+        <TouchableOpacity
+          style={estilos.botonDetalle}
+          onPress={() =>
+            router.push({
+              pathname: "/reserva/[id]",
+              params: { id: item.id },
+            })
+          }
+        >
+          <Text style={estilos.textoBotonDetalle}>Ver detalle</Text>
+        </TouchableOpacity>
+
         {esConfirmada && (
           <View style={estilos.contenedorBotones}>
             <TouchableOpacity
@@ -142,9 +156,11 @@ export default function MisReservasPantalla() {
 
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
-      <View style={estilos.cabecera}>
-        <Text style={estilos.titulo}>Mis Reservas (Offline)</Text>
-      </View>
+      <EstadoConexion />
+
+        <View style={estilos.cabecera}>
+          <Text style={estilos.titulo}>Mis Reservas (Offline)</Text>
+        </View>
 
       {reservas.length === 0 && !cargando ? (
         <View style={estilos.contenedorVacio}>
@@ -180,6 +196,8 @@ const estilos = StyleSheet.create({
   textoBotonQr: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
   botonCancelar: { flex: 1, backgroundColor: "#FFEBEE", paddingVertical: 8, borderRadius: 8, alignItems: "center", marginLeft: 8 },
   textoBotonCancelar: { color: "#C62828", fontWeight: "bold", fontSize: 14 },
+  botonDetalle: {alignSelf: "flex-start", backgroundColor: "#E8F5E9", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginBottom: 12,},
+  textoBotonDetalle: {color: "#2E7D32", fontWeight: "bold", fontSize: 14,},
   contenedorVacio: { flex: 1, justifyContent: "center", alignItems: "center" },
   textoVacio: { fontSize: 16, color: "#888888" },
 });

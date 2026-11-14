@@ -13,6 +13,7 @@ import { espaciosMock } from "@/mocks/espacios";
 import { crearReserva } from "@/servicios/reservas";
 import { guardarReservaLocal } from "@/servicios/dbServicios";
 import { useSesion } from "@/contextos/Sesion";
+import { EstadoConexion } from "@/componentes/EstadoConexion";
 
 export default function ConfirmarReservaPantalla() {
   const router = useRouter();
@@ -96,6 +97,7 @@ export default function ConfirmarReservaPantalla() {
 
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+      <EstadoConexion />
       <ScrollView contentContainerStyle={estilos.contenido}>
         <Text style={estilos.titulo}>Confirmar Reserva</Text>
 
