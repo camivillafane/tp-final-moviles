@@ -68,8 +68,8 @@ export const obtenerFavoritosLocales = async (
 
   const filas = await db.getAllAsync<{ espacioId: string }>(
     `SELECT espacioId
-     FROM favoritos_usuario_locales
-     WHERE usuarioId = ?;`,
+    FROM favoritos_usuario_locales
+    WHERE usuarioId = ?;`,
     [usuarioId]
   );
 
@@ -84,7 +84,7 @@ export const guardarFavoritoLocal = async (
 
   await db.runAsync(
     `INSERT OR IGNORE INTO favoritos_usuario_locales (usuarioId, espacioId)
-     VALUES (?, ?);`,
+    VALUES (?, ?);`,
     [usuarioId, espacioId]
   );
 };
@@ -97,7 +97,7 @@ export const eliminarFavoritoLocal = async (
 
   await db.runAsync(
     `DELETE FROM favoritos_usuario_locales
-     WHERE usuarioId = ? AND espacioId = ?;`,
+    WHERE usuarioId = ? AND espacioId = ?;`,
     [usuarioId, espacioId]
   );
 };
@@ -151,6 +151,14 @@ export const obtenerReservasLocales = async (usuarioId: string): Promise<Reserva
   }));
 };
 
+export const obtenerTodasLasReservasLocales = async (): Promise<Reserva[]> => {
+  const db = await abrirBaseDeDatos();
+
+  return await db.getAllAsync<Reserva>(
+    `SELECT * FROM reservas_locales ORDER BY fecha DESC, inicio ASC;`
+  );
+};
+
 export const obtenerReservaLocal = async (
   reservaId: string,
   usuarioId: string
@@ -159,9 +167,9 @@ export const obtenerReservaLocal = async (
 
   const reserva = await db.getFirstAsync<Reserva>(
     `SELECT *
-     FROM reservas_locales
-     WHERE id = ? AND usuarioId = ?
-     LIMIT 1;`,
+    FROM reservas_locales
+    WHERE id = ? AND usuarioId = ?
+    LIMIT 1;`,
     [reservaId, usuarioId]
   );
 
@@ -192,8 +200,8 @@ export const cancelarReservaLocal = async (
 
   const reserva = await db.getFirstAsync<{ estado: string }>(
     `SELECT estado
-     FROM reservas_locales
-     WHERE id = ? AND usuarioId = ?;`,
+    FROM reservas_locales
+    WHERE id = ? AND usuarioId = ?;`,
     [reservaId, usuarioId]
   );
 
@@ -207,8 +215,8 @@ export const cancelarReservaLocal = async (
 
   await db.runAsync(
     `UPDATE reservas_locales
-     SET estado = ?, canceladaEn = ?
-     WHERE id = ? AND usuarioId = ?;`,
+    SET estado = ?, canceladaEn = ?
+    WHERE id = ? AND usuarioId = ?;`,
     ["cancelada", new Date().toISOString(), reservaId, usuarioId]
   );
 };
@@ -221,3 +229,25 @@ export const actualizarEstadoReservaLocal = async (reservaId: string, nuevoEstad
     [nuevoEstado, canceladaEn, reservaId]
   );
 };
+
+export async function obtenerReservaPorQrToken(qrToken: string) {
+  const db = await abrirBaseDeDatos();
+
+  return await db.getFirstAsync<Reserva>(
+    `SELECT * FROM reservas_locales
+    WHERE qrToken = ? AND estado = 'confirmada';`, [qrToken]
+  );
+}
+export async function obtenerNombreUsuario(usuarioId: string): Promise<string | null> {
+  const db = await abrirBaseDeDatos();
+
+  const usuario = await db.getFirstAsync<{ nombre: string }>(
+    `SELECT nombre
+    FROM usuarios_locales
+    WHERE id = ?
+    LIMIT 1;`,
+    [usuarioId]
+  );
+
+  return usuario?.nombre ?? null;
+} 
