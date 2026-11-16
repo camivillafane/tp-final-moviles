@@ -151,6 +151,14 @@ export const obtenerReservasLocales = async (usuarioId: string): Promise<Reserva
   }));
 };
 
+export const obtenerTodasLasReservasLocales = async (): Promise<Reserva[]> => {
+  const db = await abrirBaseDeDatos();
+
+  return await db.getAllAsync<Reserva>(
+    `SELECT * FROM reservas_locales ORDER BY fecha DESC, inicio ASC;`
+  );
+};
+
 export const obtenerReservaLocal = async (
   reservaId: string,
   usuarioId: string

@@ -75,7 +75,7 @@ export function MenuPerfil({
             opciones.push({
                 etiqueta: "Gestión de turnos",
                 icono: "clipboard-outline",
-                destino: proximamente("Gestión de turnos"),
+                destino: "/gestion-turnos" as any,
                 },
                 {
                 etiqueta: "Escanear QR",
