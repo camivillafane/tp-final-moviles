@@ -19,6 +19,10 @@ import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { colores } from "@/constantes/colores";
 import { roles } from "@/constantes/roles";
 import { useSesion } from "@/contextos/Sesion";
+import {
+    guardarTokenBiometrico,
+    recuperarToken,
+} from "@/servicios/sesion";
 
 export default function Perfil() {
     const router = useRouter();
@@ -44,6 +48,13 @@ export default function Perfil() {
             });
 
             if (resultado.success && usuario) {
+                const token = await recuperarToken();
+
+                if (!token) {
+                    throw new Error("Iniciá sesión nuevamente antes de activar la biometría.");
+                }
+
+                await guardarTokenBiometrico(token);
                 await SecureStore.setItemAsync("biometria_activa", "true");
                 await SecureStore.setItemAsync(
                     "usuario_biometrico",
@@ -53,8 +64,11 @@ export default function Perfil() {
                 setBiometriaActiva(true);
                 Alert.alert("¡Listo!", "Acceso biométrico activado.");
             }
-        } catch {
-            Alert.alert("Error", "No se pudo activar el acceso biométrico.");
+        } catch (error) {
+            Alert.alert(
+                "Error",
+                error instanceof Error ? error.message : "No se pudo activar el acceso biométrico."
+            );
         }
     };
 

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { SIMULAR, URL_API } from "./config";
 import { ErrorServicio } from "./errores";
+import { recuperarToken } from "./sesion";
 import type {
   CodigoError,
   RespuestaError,
@@ -14,6 +15,15 @@ const http=axios.create({
   headers:SIMULAR ? {"X-Simular": SIMULAR} : {},
 });
 
+http.interceptors.request.use(async (config) => {
+  const token = await recuperarToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
 
 function traducir(error: unknown): ErrorServicio {
   if (error instanceof ErrorServicio) return error;

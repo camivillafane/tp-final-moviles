@@ -67,7 +67,7 @@ export default function Disponibilidad() {
           })}
         </View>}
         {seleccion && <View style={styles.confirmacion}>
-          <Text style={styles.seleccionTexto}>Seleccionaste {seleccion.inicio}�{seleccion.fin}</Text>
+          <Text style={styles.seleccionTexto}>Seleccionaste {seleccion.inicio} a {seleccion.fin}</Text>
             <BotonCta
               titulo="Continuar"
               onPress={() => {
@@ -88,7 +88,6 @@ export default function Disponibilidad() {
             />
         </View>}
         {solicitud && <Text style={styles.mensajeReserva}>Turno listo para reservar: {solicitud.fecha}, {solicitud.inicio} a {solicitud.fin} - {solicitud.precio === 0 ? "Gratis" : `${solicitud.precio.toLocaleString("es-AR")}`}</Text>}
-        <View style={styles.leyenda}>{(["libre", "reservado", "fijo", "mantenimiento"] as const).map((estadoTurno) => <Text key={estadoTurno} style={styles.leyendaTexto}>- {etiquetas[estadoTurno]}</Text>)}</View>
       </ScrollView>
     </View>
   );

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -74,8 +73,11 @@ export default function Login() {
         await iniciarSesionConUsuario(usuario);
         router.replace("/");
       }
-    } catch {
-      Alert.alert("Error", "No se pudo iniciar sesión con biometría.");
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "No se pudo iniciar sesión con biometría."
+      );
     }
   };
 
