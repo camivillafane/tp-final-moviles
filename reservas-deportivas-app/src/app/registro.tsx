@@ -11,12 +11,11 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { colores } from "@/constantes/colores";
-import { registrarUsuario } from "@/servicios/autenticacion";
 import { useSesion } from "@/contextos/Sesion";
 
 export default function Registro() {
   const router = useRouter();
-  const { iniciarSesion } = useSesion();
+  const { registrarUsuario } = useSesion();
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -53,7 +52,6 @@ export default function Registro() {
         clave,
       });
 
-      await iniciarSesion(email.trim().toLowerCase(), clave);
       router.replace("/");
     } catch (error) {
       Alert.alert(
