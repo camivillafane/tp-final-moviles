@@ -117,3 +117,42 @@ const hashIngresado = await generarHash(datos.clave, registro.salt);
     ausencias: registro.ausencias,
     };
 }
+
+export async function crearEncargadoDePrueba(): Promise<void> {
+    const db = await abrirBaseDeDatos();
+
+    const email = "encargado@prueba.com";
+
+    const existente = await db.getFirstAsync<{ id: string }>(
+        "SELECT id FROM usuarios_locales WHERE email = ?;",
+        [email]
+    );
+
+    if (existente) {
+    return;
+    }
+
+    const id = Crypto.randomUUID();
+    const salt = Crypto.randomUUID();
+    const clave = "Encargado123!";
+    const claveHash = await generarHash(clave, salt);
+
+    await db.runAsync(
+        `INSERT INTO usuarios_locales
+        (id, nombre, email, telefono, claveHash, salt, rol,
+        espaciosFavoritos, cancelacionesTardias, ausencias)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        [
+            id,
+            "Encargado de prueba",
+            email,
+            "099000000",
+            claveHash,
+            salt,
+            "encargado",
+            "[]",
+            0,
+            0,
+        ]
+    );
+}

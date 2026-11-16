@@ -76,6 +76,11 @@ export function MenuPerfil({
                 etiqueta: "Gestión de turnos",
                 icono: "clipboard-outline",
                 destino: proximamente("Gestión de turnos"),
+                },
+                {
+                etiqueta: "Escanear QR",
+                icono: "qr-code-outline",
+                destino: "/escanear-qr" as any,
             });
         }
     }
