@@ -74,7 +74,7 @@ export default function AdministracionTurnosPantalla() {
   const [finBloqueo, setFinBloqueo] = useState("09:00");
   const [motivo, setMotivo] = useState("");
   const [titular, setTitular] = useState("");
-  const [diaFija, setDiaFija] = useState(1);
+  const [diaFija, setDiaFija] = useState<ReservaFijaApi["dia"]>(1);
   const [inicioFija, setInicioFija] = useState("08:00");
   const [finFija, setFinFija] = useState("09:00");
   const [desdeFija, setDesdeFija] = useState(fechaHoy());
@@ -273,7 +273,7 @@ export default function AdministracionTurnosPantalla() {
               {!editandoFijaId && <SelectorEspacio espacios={espacios} valor={espacioId} onChange={setEspacioId} />}
               <Campo etiqueta="Titular / grupo" valor={titular} onChange={setTitular} placeholder="Grupo de entrenamiento" />
               <Text style={estilos.etiqueta}>Día de la semana</Text>
-              <View style={estilos.dias}>{DIAS.map((dia, indice) => <Pressable key={dia} onPress={() => setDiaFija(indice)} style={[estilos.dia, diaFija === indice && estilos.diaActivo]}><Text style={[estilos.textoDia, diaFija === indice && estilos.textoDiaActivo]}>{dia.slice(0, 3)}</Text></Pressable>)}</View>
+              <View style={estilos.dias}>{DIAS.map((dia, indice) => <Pressable key={dia} onPress={() => setDiaFija(indice as ReservaFijaApi["dia"])} style={[estilos.dia, diaFija === indice && estilos.diaActivo]}><Text style={[estilos.textoDia, diaFija === indice && estilos.textoDiaActivo]}>{dia.slice(0, 3)}</Text></Pressable>)}</View>
               <View style={estilos.fila}>
                 <SelectorHora
                   etiqueta="Desde"
@@ -315,7 +315,7 @@ export default function AdministracionTurnosPantalla() {
 }
 
 function VistaMensaje({ mensaje, volver }: { mensaje: string; volver?: () => void }) {
-  return <SafeAreaView style={estilos.contenedor}><View style={estilos.centro}><Text style={estilos.secundario}>{mensaje}</Text>{volver && <Boton texto="Volver" onPress={volver} />}</View></SafeAreaView>;
+  return <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}><View style={estilos.centro}><Text style={estilos.secundario}>{mensaje}</Text>{volver && <Boton texto="Volver" onPress={volver} />}</View></SafeAreaView>;
 }
 
 function SelectorEspacio({ espacios, valor, onChange }: { espacios: Espacio[]; valor: string; onChange: (valor: string) => void }) {

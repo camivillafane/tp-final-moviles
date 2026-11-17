@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import IonIcons from "@react-native-vector-icons/ionicons";
+import { colores } from "@/constantes/colores";
 
 import { useSesion } from "@/contextos/Sesion";
 import {
@@ -105,7 +107,7 @@ export default function GestionTurnosPantalla() {
 
     if (cargando || cargandoReservas) {
         return (
-            <SafeAreaView style={styles.contenedor}>
+            <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
                 <Text style={styles.mensaje}>Cargando turnos...</Text>
             </SafeAreaView>
         );
@@ -113,7 +115,7 @@ export default function GestionTurnosPantalla() {
 
     if (!usuario || usuario.rol !== "encargado") {
         return (
-            <SafeAreaView style={styles.contenedor}>
+            <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
                 <Text style={styles.mensaje}>
                     No tenés permiso para acceder a esta pantalla.
                 </Text>
@@ -126,9 +128,14 @@ export default function GestionTurnosPantalla() {
     }
 
     return (
-        <SafeAreaView style={styles.contenedor}>
-            <Pressable onPress={() => router.back()}>
-                <Text style={styles.volver}>← Volver</Text>
+        <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
+            <Pressable
+                onPress={() => router.back()}
+                style={styles.botonVolver}
+                accessibilityRole="button"
+                accessibilityLabel="Volver atrás"
+            >
+                <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
             </Pressable>
 
             <Text style={styles.titulo}>Gestión de turnos</Text>
@@ -212,6 +219,9 @@ const styles = StyleSheet.create({
     volver: {
         fontSize: 18,
         color: "#287A55",
+        marginBottom: 24,
+    },
+    botonVolver: {
         marginBottom: 24,
     },
     titulo: {

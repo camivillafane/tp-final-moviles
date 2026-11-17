@@ -1,4 +1,5 @@
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { colores } from "@/constantes/colores";
 
 interface EstadoCargaProps {
@@ -7,10 +8,10 @@ interface EstadoCargaProps {
 
 export function EstadoCarga({ mensaje = "Cargando..." }: EstadoCargaProps) {
   return (
-    <View style={estilos.contenedor}>
+    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <ActivityIndicator size="large" color={colores.verdePrincipal} />
       <Text style={estilos.mensaje}>{mensaje}</Text>
-    </View>
+    </SafeAreaView>
   );
 }
 
