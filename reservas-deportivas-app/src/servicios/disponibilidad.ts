@@ -4,6 +4,10 @@ import { obtenerTodasLasReservasLocales } from "@/servicios/dbServicios";
 import { getLista } from "@/servicios/cliente";
 import { obtenerIdEspacioApi } from "@/servicios/mapeoEspacios";
 import { DiaBloqueado, ReservaFija, TurnoSeleccionado, Turno } from "@/tipos/turno";
+import { SIMULAR_ERROR_RED, DEMORA_MOCK_MS, USAR_MOCKS } from "./config";
+import { obtenerTodasLasReservasLocales } from "@/servicios/dbServicios";
+import { getLista } from "@/servicios/cliente";
+
 
 const HORA_APERTURA = 8 * 60;
 const HORA_CIERRE = 24 * 60;
@@ -160,7 +164,14 @@ export function prepararSolicitudReserva(turno: Turno): TurnoSeleccionado | null
   const ahora = new Date();
   const hoy = fechaLocal(ahora);
   if (turno.fecha < hoy || (turno.fecha === hoy && minutos(turno.inicio) <= ahora.getHours() * 60 + ahora.getMinutes())) return null;
-  return { espacioId: turno.espacioId, fecha: turno.fecha, inicio: turno.inicio, fin: turno.fin, precio: turno.precio };
+  return {
+    turnoId: turno.id,
+    espacioId: turno.espacioId,
+    fecha: turno.fecha,
+    inicio: turno.inicio,
+    fin: turno.fin,
+    precio: turno.precio,
+  };
 }
 
 export function getProximosSieteDias(desde = new Date()): string[] {

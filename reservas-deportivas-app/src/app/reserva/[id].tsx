@@ -10,9 +10,10 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSesion } from "@/contextos/Sesion";
-import { obtenerReservaLocal } from "@/servicios/dbServicios";
+import { obtenerDetalleReserva } from "@/servicios/reservas";
+import { getEspacioById } from "@/servicios/espacios";
 import type { Reserva } from "@/tipos/reserva";
-import { espaciosMock } from "@/mocks/espacios"; 
+import type { Espacio } from "@/tipos/espacio";
 
 export default function DetalleReservaPantalla() {
   const router = useRouter();
@@ -20,12 +21,9 @@ export default function DetalleReservaPantalla() {
   const { usuario } = useSesion();
 
   const [reserva, setReserva] = useState<Reserva | null>(null);
+  const [espacio, setEspacio] = useState<Espacio | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
-  const espacio = reserva
-  ? espaciosMock.find((item) => item.id === reserva.espacioId)
-  : undefined;
-
   useEffect(() => {
     let desmontado = false;
 
@@ -37,10 +35,14 @@ export default function DetalleReservaPantalla() {
       }
 
       try {
-        const resultado = await obtenerReservaLocal(id, usuario.id);
+        const resultado = await obtenerDetalleReserva(id, usuario.id);
 
         if (!desmontado) {
           setReserva(resultado);
+          if (resultado) {
+            const espacioResultado = await getEspacioById(resultado.espacioId).catch(() => null);
+            if (!desmontado) setEspacio(espacioResultado);
+          }
           if (!resultado) setError("No se encontró la reserva.");
         }
       } catch (e) {
@@ -75,7 +77,9 @@ export default function DetalleReservaPantalla() {
           <View style={estilos.tarjeta}>
             <Text style={estilos.nombre}>Reserva {reserva.id}</Text>
             <Text style={estilos.estado}>
-              Estado: {reserva.estado === "confirmada" ? "Confirmada" : "Cancelada"}
+              Estado: {reserva.estado === "confirmada" ? "Confirmada" :
+                reserva.estado === "cancelada" ? "Cancelada" :
+                reserva.estado === "cumplida" ? "Cumplida" : "Ausente"}
             </Text>
             <Text style={estilos.dato}>
                 Espacio: {espacio?.nombre ?? reserva.espacioId}

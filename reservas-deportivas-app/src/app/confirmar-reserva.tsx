@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,16 +9,18 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { espaciosMock } from "@/mocks/espacios";
+import { getEspacioById } from "@/servicios/espacios";
 import { crearReserva } from "@/servicios/reservas";
 import { guardarReservaLocal } from "@/servicios/dbServicios";
 import { useSesion } from "@/contextos/Sesion";
 import { EstadoConexion } from "@/componentes/EstadoConexion";
+import type { Espacio } from "@/tipos/espacio";
 
 export default function ConfirmarReservaPantalla() {
   const router = useRouter();
   const { usuario } = useSesion();
   const params = useLocalSearchParams<{
+    turnoId: string;
     espacioId: string;
     fecha: string;
     inicio: string;
@@ -26,10 +28,37 @@ export default function ConfirmarReservaPantalla() {
     precio?: string;
   }>();
 
-  const espacio = espaciosMock.find((e) => e.id === params.espacioId);
-
+  const [espacio, setEspacio] = useState<Espacio | null>(null);
+  const [cargandoEspacio, setCargandoEspacio] = useState(true);
   const [cantidadPersonas, setCantidadPersonas] = useState<number>(1);
   const [cargando,setCargando] = useState(false);
+
+  useEffect(() => {
+    let activo = true;
+
+    getEspacioById(params.espacioId)
+      .then((resultado) => {
+        if (activo) setEspacio(resultado);
+      })
+      .catch(() => {
+        if (activo) setEspacio(null);
+      })
+      .finally(() => {
+        if (activo) setCargandoEspacio(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [params.espacioId]);
+
+  if (cargandoEspacio) {
+    return (
+      <SafeAreaView style={estilos.contenedorCentrado}>
+        <Text>Cargando espacio...</Text>
+      </SafeAreaView>
+    );
+  }
 
   if (!espacio) {
     return (
@@ -76,6 +105,7 @@ export default function ConfirmarReservaPantalla() {
 
   const nuevaReserva = await crearReserva(
     {
+      turnoId: params.turnoId || "",
       espacioId: espacio.id,
       fecha: params.fecha || "",
       inicio: params.inicio || "",
