@@ -5,8 +5,6 @@ import { getLista } from "@/servicios/cliente";
 import { obtenerIdEspacioApi } from "@/servicios/mapeoEspacios";
 import { DiaBloqueado, ReservaFija, TurnoSeleccionado, Turno } from "@/tipos/turno";
 import { SIMULAR_ERROR_RED, DEMORA_MOCK_MS, USAR_MOCKS } from "./config";
-import { obtenerTodasLasReservasLocales } from "@/servicios/dbServicios";
-import { getLista } from "@/servicios/cliente";
 
 
 const HORA_APERTURA = 8 * 60;
