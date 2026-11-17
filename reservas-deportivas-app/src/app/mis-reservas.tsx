@@ -5,10 +5,13 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Pressable,
   Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import IonIcons from "@react-native-vector-icons/ionicons";
+import { colores } from "@/constantes/colores";
 import {
   listarMisReservas,
   cancelarReserva,
@@ -169,6 +172,18 @@ export default function MisReservasPantalla() {
       <EstadoConexion />
 
         <View style={estilos.cabecera}>
+          <Pressable
+            onPress={() => router.back()}
+            style={estilos.botonVolver}
+            accessibilityRole="button"
+            accessibilityLabel="Volver atrás"
+          >
+            <IonIcons
+              name="arrow-back"
+              size={26}
+              color={colores.verdePrincipal}
+            />
+          </Pressable>
           <Text style={estilos.titulo}>Mis reservas</Text>
         </View>
 
@@ -190,7 +205,8 @@ export default function MisReservasPantalla() {
 
 const estilos = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: "#F8F9FA" },
-  cabecera: { padding: 20, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#EEEEEE" },
+  cabecera: { alignItems: "center", flexDirection: "row", padding: 20, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#EEEEEE" },
+  botonVolver: { marginRight: 14 },
   titulo: { fontSize: 22, fontWeight: "bold", color: "#1A1A1A" },
   lista: { padding: 16 },
   tarjeta: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },

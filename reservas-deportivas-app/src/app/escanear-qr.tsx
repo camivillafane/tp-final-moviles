@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { SafeAreaView } from "react-native-safe-area-context";
+import IonIcons from "@react-native-vector-icons/ionicons";
+import { colores } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
 import { obtenerReservaPorQrToken, obtenerNombreUsuario } from "@/servicios/dbServicios";
 import { listarEspacios } from "@/servicios/espacios";
@@ -43,12 +45,12 @@ useEffect(() => {
 }, []);
 
 if (cargando) {
-    return <View style={estilos.contenedor} />;
+    return <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]} />;
 }
 
 if (!usuario || usuario.rol !== "encargado") {
     return (
-        <SafeAreaView style={estilos.contenedor}>
+        <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
         <Text style={estilos.mensaje}>No tenés permiso para acceder.</Text>
         <Pressable onPress={() => router.replace("/")}>
         <Text style={estilos.botonTexto}>Volver al inicio</Text>
@@ -58,12 +60,12 @@ if (!usuario || usuario.rol !== "encargado") {
 }
 
 if (!permiso) {
-    return <View style={estilos.contenedor} />;
+    return <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]} />;
 }
 
 if (!permiso.granted) {
     return (
-        <SafeAreaView style={estilos.contenedor}>
+        <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
         <Text style={estilos.titulo}>Permiso de cámara</Text>
         <Text style={estilos.mensaje}>
             Necesitamos acceder a la cámara para escanear reservas.
@@ -76,10 +78,15 @@ if (!permiso.granted) {
 }
 
     return (
-    <SafeAreaView style={estilos.contenedor}>
+    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
         <ScrollView contentContainerStyle={estilos.contenido}>
-    <Pressable onPress={() => router.back()}>
-        <Text style={estilos.volver}>‹ Volver</Text>
+    <Pressable
+        onPress={() => router.back()}
+        style={estilos.botonVolver}
+        accessibilityRole="button"
+        accessibilityLabel="Volver atrás"
+    >
+        <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
     </Pressable>
 
     <Text style={estilos.titulo}>Escanear QR</Text>
@@ -293,6 +300,9 @@ const estilos = StyleSheet.create({
     volver: {
         fontSize: 18,
         color: "#287A55",
+        marginBottom: 24,
+    },
+    botonVolver: {
         marginBottom: 24,
     },
     titulo: {

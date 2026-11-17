@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import IonIcons from "@react-native-vector-icons/ionicons";
 import QRCode from "react-native-qrcode-svg";
+import { colores } from "@/constantes/colores";
 
 export default function QrReservaPantalla() {
   const router = useRouter();
@@ -16,8 +18,13 @@ export default function QrReservaPantalla() {
 
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
-      <Pressable onPress={() => router.back()}>
-        <Text style={estilos.volver}>‹ Volver</Text>
+      <Pressable
+        onPress={() => router.back()}
+        style={estilos.botonVolver}
+        accessibilityRole="button"
+        accessibilityLabel="Volver atrás"
+      >
+        <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
       </Pressable>
 
       <View style={estilos.contenido}>
@@ -48,6 +55,9 @@ const estilos = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8F9FA",
     padding: 20,
+  },
+  botonVolver: {
+    marginBottom: 12,
   },
   volver: {
     color: "#2E7D32",

@@ -6,9 +6,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import IonIcons from "@react-native-vector-icons/ionicons";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { colores } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
@@ -21,6 +23,7 @@ export default function Registro() {
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
   const [clave, setClave] = useState("");
+  const [mostrarClave, setMostrarClave] = useState(false);
   const [cargando, setCargando] = useState(false);
 
   const volver = () => {
@@ -102,14 +105,30 @@ export default function Registro() {
           keyboardType="phone-pad"
         />
 
-        <TextInput
-          style={estilos.input}
-          placeholder="Contraseña (mínimo 6 caracteres)"
-          placeholderTextColor={colores.verdeGrisaceo}
-          value={clave}
-          onChangeText={setClave}
-          secureTextEntry
-        />
+        <View style={estilos.contenedorClave}>
+          <TextInput
+            style={estilos.inputClave}
+            placeholder="Contraseña (mínimo 6 caracteres)"
+            placeholderTextColor={colores.verdeGrisaceo}
+            value={clave}
+            onChangeText={setClave}
+            secureTextEntry={!mostrarClave}
+          />
+          <Pressable
+            style={estilos.botonVerClave}
+            onPress={() => setMostrarClave((previo) => !previo)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              mostrarClave ? "Ocultar contraseña" : "Mostrar contraseña"
+            }
+          >
+            <IonIcons
+              name={mostrarClave ? "eye-off" : "eye"}
+              size={22}
+              color={colores.verdeGrisaceo}
+            />
+          </Pressable>
+        </View>
 
         <Pressable
           style={[estilos.boton, cargando && estilos.botonDeshabilitado]}
@@ -164,6 +183,25 @@ const estilos = StyleSheet.create({
     fontSize: 15,
     marginBottom: 14,
     padding: 14,
+  },
+  contenedorClave: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colores.blanco,
+    borderColor: colores.borde,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  inputClave: {
+    color: colores.textoOscuro,
+    flex: 1,
+    fontSize: 15,
+    padding: 14,
+  },
+  botonVerClave: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   boton: {
     alignItems: "center",
