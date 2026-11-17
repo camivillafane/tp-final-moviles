@@ -7,13 +7,78 @@ import {
 } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
 import { USAR_MOCKS } from "@/servicios/config";
+import { getLista, getUno, post } from "@/servicios/cliente";
+import { ErrorServicio } from "@/servicios/errores";
 import {
   contarReservasActivasLocales,
+  guardarReservaLocal,
   obtenerReservasLocales,
   obtenerReservaLocal,
   obtenerTodasLasReservasLocales,
   cancelarReservaLocal,
 } from "@/servicios/dbServicios";
+
+interface ReservaApi {
+  id: string;
+  turnoId: string;
+  espacioId: string;
+  usuarioId: string;
+  cantidadPersonas: number;
+  codigoQr: string;
+  estado: Reserva["estado"];
+  ingresoEn: string | null;
+  creadaEn: string;
+  cancelableHasta: string;
+  // Datos locales opcionales, presentes solo si alguna versión de la API los envía.
+  fecha?: string;
+  inicio?: string;
+  fin?: string;
+  precioPorHora?: number;
+}
+
+type ContextoReserva = Pick<Reserva, "usuarioId"> &
+  Partial<
+    Pick<
+      Reserva,
+      | "espacioId"
+      | "fecha"
+      | "inicio"
+      | "fin"
+      | "cantidadPersonas"
+      | "precioPorHora"
+    >
+  > & { turnoId?: string };
+
+function normalizarReservaApi(
+  datos: ReservaApi,
+  contexto: ContextoReserva,
+  anterior?: Reserva
+): Reserva {
+  const precioPorHora = datos.precioPorHora ?? contexto.precioPorHora ?? 0;
+  const duracionHoras = calcularDuracion(
+    datos.inicio ?? contexto.inicio ?? "00:00",
+    datos.fin ?? contexto.fin ?? "00:00"
+  );
+
+  return {
+    id: datos.id,
+    usuarioId: datos.usuarioId || contexto.usuarioId,
+    espacioId: datos.espacioId || contexto.espacioId || "",
+    fecha: datos.fecha ?? contexto.fecha ?? "",
+    inicio: datos.inicio ?? contexto.inicio ?? "",
+    fin: datos.fin ?? contexto.fin ?? "",
+    cantidadPersonas: datos.cantidadPersonas ?? contexto.cantidadPersonas ?? 1,
+    precioPorHora,
+    precioTotal: anterior?.precioTotal ?? precioPorHora * duracionHoras,
+    estado: datos.estado,
+    qrToken: datos.codigoQr,
+    creadaEn: datos.creadaEn || anterior?.creadaEn || new Date().toISOString(),
+    canceladaEn:
+      datos.estado === "cancelada"
+        ? anterior?.canceladaEn ?? new Date().toISOString()
+        : null,
+  };
+}
 
 
 
@@ -234,22 +299,33 @@ export async function listarMisReservas(usuarioId: string): Promise<Reserva[]> {
       getLista<ReservaApi>("/yo/reservas", { cuando: "proximas", pagina: 1, porPagina: 100 }),
       getLista<ReservaApi>("/yo/reservas", { cuando: "pasadas", pagina: 1, porPagina: 100 }),
     ]);
+    const reservasLocales = await obtenerReservasLocales(usuarioId);
+    const reservasLocalesPorId = new Map(
+      reservasLocales.map((reserva) => [reserva.id, reserva])
+    );
     const reservas = await Promise.all(
       [...proximas.datos, ...pasadas.datos].map((reserva) =>
         normalizarReservaApi(reserva, {
-          usuarioId,
+          usuarioId: reserva.usuarioId || usuarioId,
           turnoId: reserva.turnoId,
-          espacioId: reserva.espacioId,
-          fecha: reserva.fecha,
-          inicio: reserva.inicio,
-          fin: reserva.fin,
+          espacioId: reserva.espacioId ?? reservasLocalesPorId.get(reserva.id)?.espacioId,
+          fecha: reserva.fecha ?? reservasLocalesPorId.get(reserva.id)?.fecha,
+          inicio: reserva.inicio ?? reservasLocalesPorId.get(reserva.id)?.inicio,
+          fin: reserva.fin ?? reservasLocalesPorId.get(reserva.id)?.fin,
           cantidadPersonas: reserva.cantidadPersonas,
-          precioPorHora: reserva.precioPorHora,
-        })
+          precioPorHora: reserva.precioPorHora ?? reservasLocalesPorId.get(reserva.id)?.precioPorHora,
+        }, reservasLocalesPorId.get(reserva.id))
       )
     );
     await Promise.all(reservas.map((reserva) => guardarReservaLocal(reserva)));
-    return reservas;
+
+    const idsDevueltosPorApi = new Set(reservas.map((reserva) => reserva.id));
+    const confirmadasLocalesPendientes = reservasLocales.filter(
+      (reserva) =>
+        reserva.estado === "confirmada" && !idsDevueltosPorApi.has(reserva.id)
+    );
+
+    return [...reservas, ...confirmadasLocalesPendientes];
   } catch (error) {
     if (error instanceof ErrorServicio && error.codigo === "ERROR_RED") {
       return obtenerReservasLocales(usuarioId);
