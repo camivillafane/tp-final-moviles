@@ -1,6 +1,7 @@
 import type { Espacio } from "@/tipos/espacio";
 import type { Turno } from "@/tipos/turno";
 import { obtenerTodasLasReservasLocales } from "./dbServicios";
+import { obtenerIdEspacioApi } from "./mapeoEspacios";
 import { getLista } from "./cliente";
 
 export interface ReservaAgenda {
@@ -60,8 +61,8 @@ export async function obtenerAgenda(fecha: string): Promise<DatosAgenda> {
   for (const reservaLocal of reservasLocales) {
     if (reservaLocal.fecha !== fecha || reservaLocal.estado !== "confirmada") continue;
 
-    // Los mocks usan "espacio-02" y la API usa "esp-02".
-    const espacioId = reservaLocal.espacioId.replace(/^espacio-/, "esp-");
+    const espacioId = obtenerIdEspacioApi(reservaLocal.espacioId);
+    if (!espacioId) continue;
     const indiceTurno = turnosCombinados.findIndex(
       (turno) =>
         turno.espacioId === espacioId &&

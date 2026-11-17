@@ -42,10 +42,8 @@ const fechaLegible = (fecha: string) =>
 const etiquetaEstado = (turno: Turno) => {
   if (turno.estado === "libre") return "Libre";
   if (turno.estado === "reservado") return "Reservado";
-  if (turno.estado === "fijo") return "Reserva fija";
-  return turno.motivoBloqueo
-    ? `Bloqueado · ${turno.motivoBloqueo}`
-    : "Mantenimiento";
+  if (turno.estado === "fijo") return "Fijo";
+  return "Mantenimiento";
 };
 
 export default function AgendaDiariaPantalla() {
@@ -216,6 +214,9 @@ export default function AgendaDiariaPantalla() {
                       <View style={[estilos.estado, estiloEstado(turno.estado)]}>
                         <Text style={estilos.textoEstado}>{etiquetaEstado(turno)}</Text>
                       </View>
+                      {turno.estado === "mantenimiento" && turno.motivoBloqueo && (
+                        <Text style={estilos.motivoBloqueo}>{turno.motivoBloqueo}</Text>
+                      )}
                       {reserva && (
                         <>
                           <Text style={estilos.detalleReserva}>
@@ -306,11 +307,12 @@ const estilos = StyleSheet.create({
   },
   horario: { color: colores.textoOscuro, fontSize: 14, fontWeight: "600", minWidth: 98 },
   estado: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
-  estado_libre: { backgroundColor: "#e7f2e9" },
-  estado_reservado: { backgroundColor: "#e8eef9" },
-  estado_fijo: { backgroundColor: "#f4ebd8" },
-  estado_mantenimiento: { backgroundColor: "#f8e5e5" },
+  estado_libre: { backgroundColor: "#e5f2e8" },
+  estado_reservado: { backgroundColor: "#f3e1e1" },
+  estado_fijo: { backgroundColor: "#eee5f2" },
+  estado_mantenimiento: { backgroundColor: "#f4ecd9" },
   textoEstado: { color: colores.textoOscuro, fontSize: 12, fontWeight: "600" },
+  motivoBloqueo: { color: colores.verdeGrisaceo, flexBasis: "100%", fontSize: 12 },
   detalleReserva: { color: colores.verdeGrisaceo, flexBasis: "100%", fontSize: 12 },
   botonCancelarLocal: { alignSelf: "flex-start", borderColor: "#c62828", borderRadius: 8, borderWidth: 1, marginTop: 4, paddingHorizontal: 10, paddingVertical: 6 },
   textoCancelarLocal: { color: "#c62828", fontSize: 12, fontWeight: "600" },

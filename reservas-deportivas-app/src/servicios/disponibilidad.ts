@@ -1,6 +1,8 @@
 import { diasBloqueadosMock, reservasFijasMock, reservasMock } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
 import { obtenerTodasLasReservasLocales } from "@/servicios/dbServicios";
+import { getLista } from "@/servicios/cliente";
+import { obtenerIdEspacioApi } from "@/servicios/mapeoEspacios";
 import { DiaBloqueado, ReservaFija, TurnoSeleccionado, Turno } from "@/tipos/turno";
 
 const HORA_APERTURA = 8 * 60;
@@ -32,6 +34,47 @@ const fijaVigente = (fija: ReservaFija, fecha: string, diaSemana: number) =>
   fija.diaSemana === diaSemana && fecha >= fija.vigenteDesde && (!fija.vigenteHasta || fecha <= fija.vigenteHasta);
 
 export async function getDisponibilidad(espacioId: string, fecha: string): Promise<Turno[]> {
+  const espacio = espaciosMock.find((item) => item.id === espacioId && item.activo);
+  if (!espacio) throw new Error("El espacio no existe o no esta disponible.");
+
+  const fechaSeleccionada = new Date(`${fecha}T12:00:00`);
+  if (Number.isNaN(fechaSeleccionada.getTime()) || fechaLocal(fechaSeleccionada) !== fecha) {
+    throw new Error("La fecha seleccionada no es valida.");
+  }
+
+  const espacioApiId = obtenerIdEspacioApi(espacioId);
+  if (espacioApiId) {
+    const [respuesta, reservasLocales] = await Promise.all([
+      getLista<Turno>(`/espacios/${espacioApiId}/turnos`, { fecha, porPagina: 100 }),
+      obtenerTodasLasReservasLocales(),
+    ]);
+    const turnos = respuesta.datos.map((turno) => ({ ...turno, espacioId }));
+
+    for (const reservaLocal of reservasLocales) {
+      if (
+        reservaLocal.estado !== "confirmada" ||
+        reservaLocal.espacioId !== espacioId ||
+        reservaLocal.fecha !== fecha
+      ) {
+        continue;
+      }
+
+      const indiceTurno = turnos.findIndex(
+        (turno) => turno.inicio === reservaLocal.inicio && turno.fin === reservaLocal.fin
+      );
+      if (indiceTurno === -1) continue;
+
+      turnos[indiceTurno] = {
+        ...turnos[indiceTurno],
+        estado: "reservado",
+        reservaId: reservaLocal.id,
+        motivoBloqueo: null,
+      };
+    }
+
+    return turnos;
+  }
+
   return new Promise((resolve, reject) => {
     setTimeout(async () => {
       try {
