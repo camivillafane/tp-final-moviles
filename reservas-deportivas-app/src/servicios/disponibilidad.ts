@@ -36,15 +36,17 @@ const fijaVigente = (fija: ReservaFija, fecha: string, diaSemana: number) =>
   fija.diaSemana === diaSemana && fecha >= fija.vigenteDesde && (!fija.vigenteHasta || fecha <= fija.vigenteHasta);
 
 export async function getDisponibilidad(espacioId: string, fecha: string): Promise<Turno[]> {
-  const espacio = espaciosMock.find((item) => item.id === espacioId && item.activo);
-  if (!espacio) throw new Error("El espacio no existe o no esta disponible.");
+  // const espacio = espaciosMock.find((item) => item.id === espacioId && item.activo);
+  // if (!espacio) throw new Error("El espacio no existe o no esta disponible.");
 
   const fechaSeleccionada = new Date(`${fecha}T12:00:00`);
   if (Number.isNaN(fechaSeleccionada.getTime()) || fechaLocal(fechaSeleccionada) !== fecha) {
     throw new Error("La fecha seleccionada no es valida.");
   }
 
-  const espacioApiId = obtenerIdEspacioApi(espacioId);
+  // const espacioApiId = obtenerIdEspacioApi(espacioId);
+  const espacioApiId =
+  obtenerIdEspacioApi(espacioId) ?? (!USAR_MOCKS ? espacioId : null);
   if (espacioApiId) {
     const [respuesta, reservasLocales] = await Promise.all([
       getLista<Turno>(`/espacios/${espacioApiId}/turnos`, { fecha, porPagina: 100 }),
@@ -75,6 +77,14 @@ export async function getDisponibilidad(espacioId: string, fecha: string): Promi
     }
 
     return turnos;
+  }
+
+  const espacio = espaciosMock.find(
+  (item) => item.id === espacioId && item.activo
+);
+
+  if (!espacio) {
+    throw new Error("El espacio no existe o no está disponible.");
   }
 
   return new Promise((resolve, reject) => {

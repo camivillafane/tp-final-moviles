@@ -13,8 +13,10 @@ import {
   obtenerReservaLocal,
   obtenerTodasLasReservasLocales,
   cancelarReservaLocal,
+  guardarReservaLocal,
 } from "@/servicios/dbServicios";
-
+import { post, getLista, getUno } from "@/servicios/cliente";
+import { ErrorServicio } from "@/servicios/errores";
 
 
 const generarId = (): string => {
