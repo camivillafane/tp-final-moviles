@@ -1,14 +1,18 @@
 import type { Reserva } from "@/tipos/reserva";
-import type { SolicitudReserva } from "@/tipos/turno";
+import type { SolicitudReserva, Turno } from "@/tipos/turno";
 import {
   reservasMock,
   reservasFijasMock,
   diasBloqueadosMock,
 } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
+import { USAR_MOCKS } from "@/servicios/config";
 import {
   contarReservasActivasLocales,
+  obtenerReservasLocales,
+  obtenerReservaLocal,
   obtenerTodasLasReservasLocales,
+  cancelarReservaLocal,
 } from "@/servicios/dbServicios";
 
 
@@ -109,12 +113,17 @@ export const crearReserva = async (
 
 
   const reservasLocales = await obtenerTodasLasReservasLocales();
+  const reservasLocalesPorId = new Map(
+    reservasLocales.map((reserva) => [reserva.id, reserva])
+  );
 
   const turnoMockOcupado = reservasMock.some(
     (turno) =>
       turno.espacioId === solicitud.espacioId &&
       turno.fecha === solicitud.fecha &&
       turno.estado !== "libre" &&
+      (!turno.reservaId ||
+        reservasLocalesPorId.get(turno.reservaId)?.estado !== "cancelada") &&
       horariosSeSuperponen(
         solicitud.inicio,
         solicitud.fin,
@@ -140,24 +149,6 @@ export const crearReserva = async (
     throw new Error("El horario seleccionado ya está ocupado.");
   }
 
-
-  const reservasLocales = await obtenerTodasLasReservasLocales();
-  const turnoOcupadoEnPersistencia = reservasLocales.some(
-    (reserva) =>
-      reserva.estado === "confirmada" &&
-      reserva.espacioId === solicitud.espacioId &&
-      reserva.fecha === solicitud.fecha &&
-      horariosSeSuperponen(
-        solicitud.inicio,
-        solicitud.fin,
-        reserva.inicio,
-        reserva.fin
-      )
-  );
-
-  if (turnoOcupadoEnPersistencia) {
-    throw new Error("Ya existe una reserva confirmada para ese horario.");
-  }
 
   const fechaSeleccionada = new Date(`${solicitud.fecha}T12:00:00`);
   const diaSemana = fechaSeleccionada.getDay();
@@ -215,9 +206,6 @@ if (cantidadReservasActivas >= 3) {
     creadaEn: new Date().toISOString(),
     canceladaEn: null,
   };
-
-
-  reservasEjemplo.push(nuevaReserva);
 
 
   const nuevoTurno: Turno = {
