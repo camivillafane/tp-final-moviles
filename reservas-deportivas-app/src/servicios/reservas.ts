@@ -1,6 +1,5 @@
 import type { Reserva } from "@/tipos/reserva";
 import type { SolicitudReserva } from "@/tipos/turno";
-import { reservasEjemplo } from "@/mocks/reservas";
 import {
   reservasMock,
   reservasFijasMock,
@@ -8,9 +7,93 @@ import {
 } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
 import {
+  cancelarReservaLocal,
   contarReservasActivasLocales,
+  guardarReservaLocal,
+  obtenerReservaLocal,
+  obtenerReservasLocales,
   obtenerTodasLasReservasLocales,
 } from "@/servicios/dbServicios";
+import { USAR_MOCKS } from "@/servicios/config";
+import { ErrorServicio } from "@/servicios/errores";
+import { getLista, getUno, post } from "@/servicios/cliente";
+import { getEspacioById } from "@/servicios/espacios";
+
+type ReservaApi = Partial<Reserva> & {
+  turnoId?: string;
+  codigoQr?: string | null;
+  ingresoEn?: string | null;
+  cancelableHasta?: string | null;
+};
+
+interface DatosReservaFallback {
+  usuarioId: string;
+  turnoId?: string;
+  espacioId?: string;
+  fecha?: string;
+  inicio?: string;
+  fin?: string;
+  cantidadPersonas?: number;
+  precioPorHora?: number;
+}
+
+const datosTurnoDesdeId = (turnoId?: string) => {
+  const coincidencia = turnoId?.match(/^tur-(.+)-(\d{4})(\d{2})(\d{2})-(\d{2})$/);
+  if (!coincidencia) return null;
+
+  const [, espacioId, anio, mes, dia, hora] = coincidencia;
+  const horaInicio = Number(hora);
+  return {
+    espacioId,
+    fecha: `${anio}-${mes}-${dia}`,
+    inicio: `${hora}:00`,
+    fin: `${String(horaInicio + 1).padStart(2, "0")}:00`,
+  };
+};
+
+async function normalizarReservaApi(
+  datos: ReservaApi,
+  fallback: DatosReservaFallback,
+  reservaAnterior?: Reserva
+): Promise<Reserva> {
+  const turno = datosTurnoDesdeId(datos.turnoId);
+  const espacioId = datos.espacioId ?? reservaAnterior?.espacioId ?? fallback.espacioId ?? turno?.espacioId;
+  const fecha = datos.fecha ?? reservaAnterior?.fecha ?? fallback.fecha ?? turno?.fecha;
+  const inicio = datos.inicio ?? reservaAnterior?.inicio ?? fallback.inicio ?? turno?.inicio;
+  const fin = datos.fin ?? reservaAnterior?.fin ?? fallback.fin ?? turno?.fin;
+
+  if (!datos.id || !espacioId || !fecha || !inicio || !fin) {
+    throw new Error("La API devolvió una reserva sin los datos del turno.");
+  }
+
+  const espacio = await getEspacioById(espacioId).catch(() => null);
+  const precioPorHora =
+    datos.precioPorHora ?? reservaAnterior?.precioPorHora ?? fallback.precioPorHora ?? espacio?.precioPorHora ?? 0;
+  const duracion = calcularDuracion(inicio, fin);
+  const qrToken = datos.qrToken ?? datos.codigoQr ?? reservaAnterior?.qrToken;
+
+  if (!qrToken) {
+    throw new Error("La API creó la reserva, pero no devolvió el código QR.");
+  }
+
+  return {
+    id: datos.id,
+    usuarioId: datos.usuarioId ?? reservaAnterior?.usuarioId ?? fallback.usuarioId,
+    espacioId,
+    fecha,
+    inicio,
+    fin,
+    cantidadPersonas:
+      datos.cantidadPersonas ?? reservaAnterior?.cantidadPersonas ?? fallback.cantidadPersonas ?? 1,
+    precioPorHora,
+    precioTotal:
+      datos.precioTotal ?? reservaAnterior?.precioTotal ?? precioPorHora * duracion,
+    estado: datos.estado ?? reservaAnterior?.estado ?? "confirmada",
+    qrToken,
+    creadaEn: datos.creadaEn ?? reservaAnterior?.creadaEn ?? new Date().toISOString(),
+    canceladaEn: datos.canceladaEn ?? reservaAnterior?.canceladaEn ?? null,
+  };
+}
 
 
 
@@ -50,6 +133,30 @@ export const crearReserva = async (
 
   if (!usuarioId) {
     throw new Error("Debés iniciar sesión para reservar.");
+  }
+
+  if (!USAR_MOCKS) {
+    if (!solicitud.turnoId) {
+      throw new Error("No se identificó el turno seleccionado.");
+    }
+    if (!Number.isInteger(solicitud.cantidadPersonas) || solicitud.cantidadPersonas < 1) {
+      throw new Error("La cantidad de personas no es válida.");
+    }
+
+    const respuesta = await post<ReservaApi>("/reservas", {
+      turnoId: solicitud.turnoId,
+      cantidadPersonas: solicitud.cantidadPersonas,
+    });
+    return normalizarReservaApi(respuesta, {
+      usuarioId,
+      turnoId: solicitud.turnoId,
+      espacioId: solicitud.espacioId,
+      fecha: solicitud.fecha,
+      inicio: solicitud.inicio,
+      fin: solicitud.fin,
+      cantidadPersonas: solicitud.cantidadPersonas,
+      precioPorHora: solicitud.precio,
+    });
   }
 
 
@@ -172,35 +279,100 @@ if (cantidadReservasActivas >= 3) {
   };
 
 
-  reservasEjemplo.push(nuevaReserva);
-
-
   return nuevaReserva;
 };
 
 
-export const cancelarReserva = (reservaId: string): Reserva => {
-  const reserva = reservasEjemplo.find((item) => item.id === reservaId);
+export async function listarMisReservas(usuarioId: string): Promise<Reserva[]> {
+  if (!usuarioId) return [];
+  if (USAR_MOCKS) return obtenerReservasLocales(usuarioId);
 
-  if (!reserva) {
-    throw new Error("No se encontró la reserva especificada.");
+  try {
+    const [proximas, pasadas] = await Promise.all([
+      getLista<ReservaApi>("/yo/reservas", { cuando: "proximas", pagina: 1, porPagina: 100 }),
+      getLista<ReservaApi>("/yo/reservas", { cuando: "pasadas", pagina: 1, porPagina: 100 }),
+    ]);
+    const reservas = await Promise.all(
+      [...proximas.datos, ...pasadas.datos].map((reserva) =>
+        normalizarReservaApi(reserva, {
+          usuarioId,
+          turnoId: reserva.turnoId,
+          espacioId: reserva.espacioId,
+          fecha: reserva.fecha,
+          inicio: reserva.inicio,
+          fin: reserva.fin,
+          cantidadPersonas: reserva.cantidadPersonas,
+          precioPorHora: reserva.precioPorHora,
+        })
+      )
+    );
+    await Promise.all(reservas.map((reserva) => guardarReservaLocal(reserva)));
+    return reservas;
+  } catch (error) {
+    if (error instanceof ErrorServicio && error.codigo === "ERROR_RED") {
+      return obtenerReservasLocales(usuarioId);
+    }
+    throw error;
+  }
+}
+
+export async function obtenerDetalleReserva(
+  reservaId: string,
+  usuarioId: string
+): Promise<Reserva | null> {
+  if (USAR_MOCKS) return obtenerReservaLocal(reservaId, usuarioId);
+
+  try {
+    const datos = await getUno<ReservaApi>(`/reservas/${encodeURIComponent(reservaId)}`);
+    const reserva = await normalizarReservaApi(datos, {
+      usuarioId,
+      turnoId: datos.turnoId,
+      espacioId: datos.espacioId,
+      fecha: datos.fecha,
+      inicio: datos.inicio,
+      fin: datos.fin,
+      cantidadPersonas: datos.cantidadPersonas,
+      precioPorHora: datos.precioPorHora,
+    });
+    await guardarReservaLocal(reserva);
+    return reserva;
+  } catch (error) {
+    if (error instanceof ErrorServicio && error.codigo === "ERROR_RED") {
+      return obtenerReservaLocal(reservaId, usuarioId);
+    }
+    throw error;
+  }
+}
+
+export async function cancelarReserva(
+  reservaId: string,
+  usuarioId: string
+): Promise<Reserva> {
+  if (!USAR_MOCKS) {
+    const reservaAnterior = await obtenerReservaLocal(reservaId, usuarioId).catch(() => null);
+    const datos = await post<ReservaApi>(
+      `/reservas/${encodeURIComponent(reservaId)}/cancelacion`
+    );
+    const reserva = await normalizarReservaApi(
+      datos,
+      {
+        usuarioId,
+        turnoId: datos.turnoId,
+        espacioId: reservaAnterior?.espacioId ?? datos.espacioId,
+        fecha: reservaAnterior?.fecha ?? datos.fecha,
+        inicio: reservaAnterior?.inicio ?? datos.inicio,
+        fin: reservaAnterior?.fin ?? datos.fin,
+        cantidadPersonas: reservaAnterior?.cantidadPersonas ?? datos.cantidadPersonas,
+        precioPorHora: reservaAnterior?.precioPorHora ?? datos.precioPorHora,
+      },
+      reservaAnterior ?? undefined
+    );
+    await guardarReservaLocal(reserva);
+    return reserva;
   }
 
-  if (reserva.estado === "cancelada") {
-    throw new Error("La reserva ya se encuentra cancelada.");
-  }
-
-  reserva.estado = "cancelada";
-  reserva.canceladaEn = new Date().toISOString();
-
-  const turnoIndex = reservasMock.findIndex(
-    (turno) => turno.reservaId === reservaId
-  );
-
-  if (turnoIndex !== -1) {
-    reservasMock[turnoIndex].estado = "libre";
-    reservasMock[turnoIndex].reservaId = null;
-  }
-
+  await cancelarReservaLocal(reservaId, usuarioId);
+  const reserva = await obtenerReservaLocal(reservaId, usuarioId);
+  if (!reserva) throw new Error("No se encontró la reserva especificada.");
   return reserva;
-};
+}
