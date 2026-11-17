@@ -1,8 +1,9 @@
 import { diasBloqueadosMock, reservasFijasMock, reservasMock } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
 import { DiaBloqueado, ReservaFija, TurnoSeleccionado, Turno } from "@/tipos/turno";
-import { SIMULAR_ERROR_RED, DEMORA_MOCK_MS } from "./config";
+import { SIMULAR_ERROR_RED, DEMORA_MOCK_MS, USAR_MOCKS } from "./config";
 import { obtenerTodasLasReservasLocales } from "@/servicios/dbServicios";
+import { getLista } from "@/servicios/cliente";
 
 
 const HORA_APERTURA = 8 * 60;
@@ -34,6 +35,11 @@ const fijaVigente = (fija: ReservaFija, fecha: string, diaSemana: number) =>
   fija.diaSemana === diaSemana && fecha >= fija.vigenteDesde && (!fija.vigenteHasta || fecha <= fija.vigenteHasta);
 
 export async function getDisponibilidad(espacioId: string, fecha: string): Promise<Turno[]> {
+  if (!USAR_MOCKS) {
+    const respuesta = await getLista<Turno>(`/espacios/${espacioId}/turnos`, { fecha });
+    return respuesta.datos;
+  }
+
   return new Promise((resolve, reject) => {
     setTimeout(async () => {
       try {
