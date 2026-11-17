@@ -77,6 +77,7 @@ export default function Disponibilidad() {
                 router.push({
                   pathname: "/confirmar-reserva",
                   params: {
+                    turnoId: datos.turnoId,
                     espacioId: datos.espacioId,
                     fecha: datos.fecha,
                     inicio: datos.inicio,

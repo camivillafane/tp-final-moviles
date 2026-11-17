@@ -1,4 +1,4 @@
-export type EstadoReserva = "confirmada" | "cancelada";
+export type EstadoReserva = "confirmada" | "cancelada" | "cumplida" | "ausente";
 
 export interface Reserva {
   id: string;

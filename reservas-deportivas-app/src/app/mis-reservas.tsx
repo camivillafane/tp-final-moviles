@@ -10,11 +10,12 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  obtenerReservasLocales,
-  cancelarReservaLocal,
-} from "@/servicios/dbServicios";
-import { espaciosMock } from "@/mocks/espacios";
+  listarMisReservas,
+  cancelarReserva,
+} from "@/servicios/reservas";
+import { listarEspacios } from "@/servicios/espacios";
 import type { Reserva } from "@/tipos/reserva";
+import type { Espacio } from "@/tipos/espacio";
 import { useSesion } from "@/contextos/Sesion";
 import { EstadoConexion } from "@/componentes/EstadoConexion";
 
@@ -24,6 +25,7 @@ export default function MisReservasPantalla() {
   const { usuario } = useSesion();
   const usuarioId = usuario?.id;
   const [reservas, setReservas] = useState<Reserva[]>([]);
+  const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [cargando, setCargando] = useState(true);
 
 
@@ -36,11 +38,15 @@ export default function MisReservasPantalla() {
       return;
     }
 
-    const data = await obtenerReservasLocales(usuarioId);
+    const [data, espaciosRespuesta] = await Promise.all([
+      listarMisReservas(usuarioId),
+      listarEspacios({ porPagina: 100 }).catch(() => null),
+    ]);
     setReservas(data);
+    setEspacios(espaciosRespuesta?.datos ?? []);
   } catch (error) {
-    console.error("Error al cargar reservas locales:", error);
-    Alert.alert("Error", "No se pudieron cargar tus reservas locales.");
+    console.error("Error al cargar reservas:", error);
+    Alert.alert("Error", "No se pudieron cargar tus reservas.");
   } finally {
     setCargando(false);
   }
@@ -66,7 +72,7 @@ export default function MisReservasPantalla() {
               if (!usuario) {
                 throw new Error("Debés iniciar sesión para cancelar.");
 }
-              await cancelarReservaLocal(reservaId, usuario.id);
+              await cancelarReserva(reservaId, usuario.id);
               await cargarReservas();
               Alert.alert("Éxito", "La reserva ha sido cancelada.");
             } catch (error: any) {
@@ -79,8 +85,12 @@ export default function MisReservasPantalla() {
   };
 
   const renderItem = ({ item }: { item: Reserva }) => {
-    const espacio = espaciosMock.find((e) => e.id === item.espacioId);
+    const espacio = espacios.find((e) => e.id === item.espacioId);
     const esConfirmada = item.estado === "confirmada";
+    const etiquetaEstado =
+      item.estado === "confirmada" ? "Confirmada" :
+      item.estado === "cancelada" ? "Cancelada" :
+      item.estado === "cumplida" ? "Cumplida" : "Ausente";
 
     return (
       <View style={[estilos.tarjeta, !esConfirmada && estilos.tarjetaCancelada]}>
@@ -100,7 +110,7 @@ export default function MisReservasPantalla() {
                 { color: esConfirmada ? "#2E7D32" : "#C62828" },
               ]}
             >
-              {esConfirmada ? "Confirmada" : "Cancelada"}
+              {etiquetaEstado}
             </Text>
           </View>
         </View>
@@ -159,7 +169,7 @@ export default function MisReservasPantalla() {
       <EstadoConexion />
 
         <View style={estilos.cabecera}>
-          <Text style={estilos.titulo}>Mis Reservas (Offline)</Text>
+          <Text style={estilos.titulo}>Mis reservas</Text>
         </View>
 
       {reservas.length === 0 && !cargando ? (

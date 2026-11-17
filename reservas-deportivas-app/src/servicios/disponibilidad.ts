@@ -133,7 +133,14 @@ export function prepararSolicitudReserva(turno: Turno): TurnoSeleccionado | null
   const ahora = new Date();
   const hoy = fechaLocal(ahora);
   if (turno.fecha < hoy || (turno.fecha === hoy && minutos(turno.inicio) <= ahora.getHours() * 60 + ahora.getMinutes())) return null;
-  return { espacioId: turno.espacioId, fecha: turno.fecha, inicio: turno.inicio, fin: turno.fin, precio: turno.precio };
+  return {
+    turnoId: turno.id,
+    espacioId: turno.espacioId,
+    fecha: turno.fecha,
+    inicio: turno.inicio,
+    fin: turno.fin,
+    precio: turno.precio,
+  };
 }
 
 export function getProximosSieteDias(desde = new Date()): string[] {
