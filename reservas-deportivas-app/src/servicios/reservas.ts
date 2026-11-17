@@ -1,5 +1,5 @@
 import type { Reserva } from "@/tipos/reserva";
-import type { SolicitudReserva, Turno } from "@/tipos/turno";
+import type { SolicitudReserva } from "@/tipos/turno";
 import { reservasEjemplo } from "@/mocks/reservas";
 import {
   reservasMock,
@@ -7,7 +7,10 @@ import {
   diasBloqueadosMock,
 } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
-import { contarReservasActivasLocales } from "@/servicios/dbServicios";
+import {
+  contarReservasActivasLocales,
+  obtenerTodasLasReservasLocales,
+} from "@/servicios/dbServicios";
 
 
 
@@ -82,7 +85,9 @@ export const crearReserva = async (
   }
 
 
-  const turnoOcupado = reservasMock.some(
+  const reservasLocales = await obtenerTodasLasReservasLocales();
+
+  const turnoMockOcupado = reservasMock.some(
     (turno) =>
       turno.espacioId === solicitud.espacioId &&
       turno.fecha === solicitud.fecha &&
@@ -94,7 +99,21 @@ export const crearReserva = async (
         turno.fin
       )
   );
-  if (turnoOcupado) {
+
+  const turnoLocalOcupado = reservasLocales.some(
+    (reserva) =>
+      reserva.estado === "confirmada" &&
+      reserva.espacioId === solicitud.espacioId &&
+      reserva.fecha === solicitud.fecha &&
+      horariosSeSuperponen(
+        solicitud.inicio,
+        solicitud.fin,
+        reserva.inicio,
+        reserva.fin
+      )
+  );
+
+  if (turnoMockOcupado || turnoLocalOcupado) {
     throw new Error("El horario seleccionado ya está ocupado.");
   }
 
@@ -155,19 +174,6 @@ if (cantidadReservasActivas >= 3) {
 
   reservasEjemplo.push(nuevaReserva);
 
-
-  const nuevoTurno: Turno = {
-    id: `turno-${nuevaReserva.id}`,
-    espacioId: espacio.id,
-    fecha: solicitud.fecha,
-    inicio: solicitud.inicio,
-    fin: solicitud.fin,
-    estado: "reservado",
-    reservaId: nuevaReserva.id,
-    motivoBloqueo: null,
-    precio: precioTotal,
-  };
-  reservasMock.push(nuevoTurno);
 
   return nuevaReserva;
 };
