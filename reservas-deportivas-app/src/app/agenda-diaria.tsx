@@ -43,7 +43,7 @@ const etiquetaEstado = (turno: Turno) => {
   if (turno.estado === "libre") return "Libre";
   if (turno.estado === "reservado") return "Reservado";
   if (turno.estado === "fijo") return "Fijo";
-  return "Mantenimiento";
+  return "Bloqueado";
 };
 
 export default function AgendaDiariaPantalla() {
@@ -207,7 +207,7 @@ export default function AgendaDiariaPantalla() {
                     ? reservasPorId.get(turno.reservaId)
                     : undefined;
                   return (
-                    <View key={turno.id} style={estilos.tarjetaTurno}>
+                    <View key={turno.id} style={[estilos.tarjetaTurno, turno.estado === "mantenimiento" && estilos.tarjetaBloqueada]}>
                       <Text style={estilos.horario}>
                         {turno.inicio} – {turno.fin}
                       </Text>
@@ -215,7 +215,7 @@ export default function AgendaDiariaPantalla() {
                         <Text style={estilos.textoEstado}>{etiquetaEstado(turno)}</Text>
                       </View>
                       {turno.estado === "mantenimiento" && turno.motivoBloqueo && (
-                        <Text style={estilos.motivoBloqueo}>{turno.motivoBloqueo}</Text>
+                        <Text style={estilos.motivoBloqueo}>Motivo: {turno.motivoBloqueo}</Text>
                       )}
                       {reserva && (
                         <>
@@ -305,12 +305,13 @@ const estilos = StyleSheet.create({
     gap: 8,
     paddingVertical: 10,
   },
+  tarjetaBloqueada: { backgroundColor: "#fff0f0", borderRadius: 8, paddingHorizontal: 7 },
   horario: { color: colores.textoOscuro, fontSize: 14, fontWeight: "600", minWidth: 98 },
   estado: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   estado_libre: { backgroundColor: "#e5f2e8" },
   estado_reservado: { backgroundColor: "#f3e1e1" },
   estado_fijo: { backgroundColor: "#eee5f2" },
-  estado_mantenimiento: { backgroundColor: "#f4ecd9" },
+  estado_mantenimiento: { backgroundColor: "#f8d7da" },
   textoEstado: { color: colores.textoOscuro, fontSize: 12, fontWeight: "600" },
   motivoBloqueo: { color: colores.verdeGrisaceo, flexBasis: "100%", fontSize: 12 },
   detalleReserva: { color: colores.verdeGrisaceo, flexBasis: "100%", fontSize: 12 },

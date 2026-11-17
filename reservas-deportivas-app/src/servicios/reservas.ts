@@ -153,7 +153,11 @@ if (cantidadReservasActivas >= 3) {
 }
 
 
-  const precioPorHora = espacio.precioPorHora;
+  if (!Number.isInteger(solicitud.precio) || solicitud.precio < 0) {
+    throw new Error("El precio por hora no es válido.");
+  }
+
+  const precioPorHora = solicitud.precio;
   const precioTotal = precioPorHora * duracion;
 
 
@@ -186,7 +190,7 @@ if (cantidadReservasActivas >= 3) {
     estado: "reservado",
     reservaId: nuevaReserva.id,
     motivoBloqueo: null,
-    precio: precioTotal,
+    precio: precioPorHora,
   };
   reservasMock.push(nuevoTurno);
 

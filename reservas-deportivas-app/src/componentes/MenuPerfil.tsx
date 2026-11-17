@@ -78,6 +78,20 @@ export function MenuPerfil({
                 destino: "/agenda-diaria" as any,
             });
 
+            opciones.push({
+                etiqueta: "Administración de turnos",
+                icono: "time-outline",
+                destino: "/administracion-turnos" as any,
+            });
+
+            if (usuario.rol === "administrador") {
+                opciones.push({
+                    etiqueta: "Gestión de espacios",
+                    icono: "business-outline",
+                    destino: "/administracion-espacios" as any,
+                });
+            }
+
             if (usuario.rol === "encargado") {
                 opciones.push(
                     {

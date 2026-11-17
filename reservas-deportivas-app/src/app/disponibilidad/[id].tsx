@@ -13,8 +13,8 @@ import { Espacio } from "@/tipos/espacio";
 import { TurnoSeleccionado, Turno } from "@/tipos/turno";
 
 const fechaLegible = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
-const etiquetas: Record<Turno["estado"], string> = { libre: "Libre", reservado: "Reservado", fijo: "Fijo", mantenimiento: "Mantenimiento" };
-const coloresEstado: Record<Turno["estado"], string> = { libre: "#e5f2e8", reservado: "#f3e1e1", fijo: "#eee5f2", mantenimiento: "#f4ecd9" };
+const etiquetas: Record<Turno["estado"], string> = { libre: "Libre", reservado: "Reservado", fijo: "Fijo", mantenimiento: "Bloqueado" };
+const coloresEstado: Record<Turno["estado"], string> = { libre: "#e5f2e8", reservado: "#f3e1e1", fijo: "#eee5f2", mantenimiento: "#f8d7da" };
 
 export default function Disponibilidad() {
   const router = useRouter();
@@ -62,7 +62,7 @@ export default function Disponibilidad() {
             const activo = seleccion?.id === turno.id;
             return <Pressable key={turno.id} disabled={!reservable} onPress={() => { setSeleccion(turno); setSolicitud(null); }} style={[styles.bloque, { backgroundColor: coloresEstado[turno.estado] }, activo && styles.bloqueActivo, !reservable && styles.bloqueDeshabilitado]}>
               <Text style={styles.hora}>{turno.inicio}</Text><Text style={styles.estado}>{turno.estado === "libre" && !reservable ? "Pasado" : etiquetas[turno.estado]}</Text>
-              {turno.motivoBloqueo ? <Text style={styles.motivo}>{turno.motivoBloqueo}</Text> : null}
+              {turno.motivoBloqueo ? <Text style={styles.motivo}>Motivo: {turno.motivoBloqueo}</Text> : null}
             </Pressable>;
           })}
         </View>}
