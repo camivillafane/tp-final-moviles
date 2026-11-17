@@ -73,15 +73,39 @@ export function MenuPerfil({
             );
         } else {
             opciones.push({
-                etiqueta: "Gestión de turnos",
-                icono: "clipboard-outline",
-                destino: "/gestion-turnos" as any,
-                },
-                {
-                etiqueta: "Escanear QR",
-                icono: "qr-code-outline",
-                destino: "/escanear-qr" as any,
+                etiqueta: "Agenda diaria",
+                icono: "today-outline",
+                destino: "/agenda-diaria" as any,
             });
+
+            opciones.push({
+                etiqueta: "Administración de turnos",
+                icono: "time-outline",
+                destino: "/administracion-turnos" as any,
+            });
+
+            if (usuario.rol === "administrador") {
+                opciones.push({
+                    etiqueta: "Gestión de espacios",
+                    icono: "business-outline",
+                    destino: "/administracion-espacios" as any,
+                });
+            }
+
+            if (usuario.rol === "encargado") {
+                opciones.push(
+                    {
+                        etiqueta: "Gestión de turnos",
+                        icono: "clipboard-outline",
+                        destino: "/gestion-turnos" as any,
+                    },
+                    {
+                        etiqueta: "Escanear QR",
+                        icono: "qr-code-outline",
+                        destino: "/escanear-qr" as any,
+                    }
+                );
+            }
         }
     }
 

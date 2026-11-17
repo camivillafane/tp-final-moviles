@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -6,7 +6,7 @@ import {
   Text,
   RefreshControl,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Espacio } from "@/tipos/espacio";
 import { Deporte } from "@/tipos/deporte";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
@@ -48,7 +48,7 @@ export default function Home() {
   const [complejoSeleccionado, setComplejoSeleccionado] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
 
-  const cargarEspacios = async () => {
+  const cargarEspacios = useCallback(async () => {
     setEstado("loading");
     setError(null);
 
@@ -60,7 +60,7 @@ export default function Home() {
       setError("No se pudieron cargar los espacios. Intentá de nuevo.");
       setEstado("error");
     }
-  };
+  }, []);
 
   useEffect(() => {
     listarDeportes()
@@ -68,9 +68,11 @@ export default function Home() {
       .catch(() => setDeportes([]));
   }, []);
 
-  useEffect(() => {
-    cargarEspacios();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      void cargarEspacios();
+    }, [cargarEspacios])
+  );
 
   const [refrescando, setRefrescando] = useState(false);
 

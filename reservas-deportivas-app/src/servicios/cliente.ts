@@ -105,6 +105,15 @@ export async function put<T>(url:string): Promise<T>{
   }
 }
 
+export async function patch<T>(url: string, cuerpo: unknown): Promise<T> {
+  try {
+    const { data } = await http.patch<RespuestaUno<T>>(url, cuerpo);
+    return data.datos;
+  } catch (error) {
+    throw traducir(error);
+  }
+}
+
 export async function borrar(url:string):Promise<void>{
   try{
     await http.delete(url);

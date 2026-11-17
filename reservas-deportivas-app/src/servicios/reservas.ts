@@ -7,93 +7,9 @@ import {
 } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
 import {
-  cancelarReservaLocal,
   contarReservasActivasLocales,
-  guardarReservaLocal,
-  obtenerReservaLocal,
-  obtenerReservasLocales,
   obtenerTodasLasReservasLocales,
 } from "@/servicios/dbServicios";
-import { USAR_MOCKS } from "@/servicios/config";
-import { ErrorServicio } from "@/servicios/errores";
-import { getLista, getUno, post } from "@/servicios/cliente";
-import { getEspacioById } from "@/servicios/espacios";
-
-type ReservaApi = Partial<Reserva> & {
-  turnoId?: string;
-  codigoQr?: string | null;
-  ingresoEn?: string | null;
-  cancelableHasta?: string | null;
-};
-
-interface DatosReservaFallback {
-  usuarioId: string;
-  turnoId?: string;
-  espacioId?: string;
-  fecha?: string;
-  inicio?: string;
-  fin?: string;
-  cantidadPersonas?: number;
-  precioPorHora?: number;
-}
-
-const datosTurnoDesdeId = (turnoId?: string) => {
-  const coincidencia = turnoId?.match(/^tur-(.+)-(\d{4})(\d{2})(\d{2})-(\d{2})$/);
-  if (!coincidencia) return null;
-
-  const [, espacioId, anio, mes, dia, hora] = coincidencia;
-  const horaInicio = Number(hora);
-  return {
-    espacioId,
-    fecha: `${anio}-${mes}-${dia}`,
-    inicio: `${hora}:00`,
-    fin: `${String(horaInicio + 1).padStart(2, "0")}:00`,
-  };
-};
-
-async function normalizarReservaApi(
-  datos: ReservaApi,
-  fallback: DatosReservaFallback,
-  reservaAnterior?: Reserva
-): Promise<Reserva> {
-  const turno = datosTurnoDesdeId(datos.turnoId);
-  const espacioId = datos.espacioId ?? reservaAnterior?.espacioId ?? fallback.espacioId ?? turno?.espacioId;
-  const fecha = datos.fecha ?? reservaAnterior?.fecha ?? fallback.fecha ?? turno?.fecha;
-  const inicio = datos.inicio ?? reservaAnterior?.inicio ?? fallback.inicio ?? turno?.inicio;
-  const fin = datos.fin ?? reservaAnterior?.fin ?? fallback.fin ?? turno?.fin;
-
-  if (!datos.id || !espacioId || !fecha || !inicio || !fin) {
-    throw new Error("La API devolvió una reserva sin los datos del turno.");
-  }
-
-  const espacio = await getEspacioById(espacioId).catch(() => null);
-  const precioPorHora =
-    datos.precioPorHora ?? reservaAnterior?.precioPorHora ?? fallback.precioPorHora ?? espacio?.precioPorHora ?? 0;
-  const duracion = calcularDuracion(inicio, fin);
-  const qrToken = datos.qrToken ?? datos.codigoQr ?? reservaAnterior?.qrToken;
-
-  if (!qrToken) {
-    throw new Error("La API creó la reserva, pero no devolvió el código QR.");
-  }
-
-  return {
-    id: datos.id,
-    usuarioId: datos.usuarioId ?? reservaAnterior?.usuarioId ?? fallback.usuarioId,
-    espacioId,
-    fecha,
-    inicio,
-    fin,
-    cantidadPersonas:
-      datos.cantidadPersonas ?? reservaAnterior?.cantidadPersonas ?? fallback.cantidadPersonas ?? 1,
-    precioPorHora,
-    precioTotal:
-      datos.precioTotal ?? reservaAnterior?.precioTotal ?? precioPorHora * duracion,
-    estado: datos.estado ?? reservaAnterior?.estado ?? "confirmada",
-    qrToken,
-    creadaEn: datos.creadaEn ?? reservaAnterior?.creadaEn ?? new Date().toISOString(),
-    canceladaEn: datos.canceladaEn ?? reservaAnterior?.canceladaEn ?? null,
-  };
-}
 
 
 
@@ -225,6 +141,24 @@ export const crearReserva = async (
   }
 
 
+  const reservasLocales = await obtenerTodasLasReservasLocales();
+  const turnoOcupadoEnPersistencia = reservasLocales.some(
+    (reserva) =>
+      reserva.estado === "confirmada" &&
+      reserva.espacioId === solicitud.espacioId &&
+      reserva.fecha === solicitud.fecha &&
+      horariosSeSuperponen(
+        solicitud.inicio,
+        solicitud.fin,
+        reserva.inicio,
+        reserva.fin
+      )
+  );
+
+  if (turnoOcupadoEnPersistencia) {
+    throw new Error("Ya existe una reserva confirmada para ese horario.");
+  }
+
   const fechaSeleccionada = new Date(`${solicitud.fecha}T12:00:00`);
   const diaSemana = fechaSeleccionada.getDay();
 
@@ -258,7 +192,11 @@ if (cantidadReservasActivas >= 3) {
 }
 
 
-  const precioPorHora = espacio.precioPorHora;
+  if (!Number.isInteger(solicitud.precio) || solicitud.precio < 0) {
+    throw new Error("El precio por hora no es válido.");
+  }
+
+  const precioPorHora = solicitud.precio;
   const precioTotal = precioPorHora * duracion;
 
 
@@ -278,6 +216,22 @@ if (cantidadReservasActivas >= 3) {
     canceladaEn: null,
   };
 
+
+  reservasEjemplo.push(nuevaReserva);
+
+
+  const nuevoTurno: Turno = {
+    id: `turno-${nuevaReserva.id}`,
+    espacioId: espacio.id,
+    fecha: solicitud.fecha,
+    inicio: solicitud.inicio,
+    fin: solicitud.fin,
+    estado: "reservado",
+    reservaId: nuevaReserva.id,
+    motivoBloqueo: null,
+    precio: precioPorHora,
+  };
+  reservasMock.push(nuevoTurno);
 
   return nuevaReserva;
 };
@@ -375,4 +329,4 @@ export async function cancelarReserva(
   const reserva = await obtenerReservaLocal(reservaId, usuarioId);
   if (!reserva) throw new Error("No se encontró la reserva especificada.");
   return reserva;
-}
+};

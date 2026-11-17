@@ -25,6 +25,7 @@ export default function ConfirmarReservaPantalla() {
     fecha: string;
     inicio: string;
     fin: string;
+    precio?: string;
   }>();
 
   const [espacio, setEspacio] = useState<Espacio | null>(null);
@@ -71,7 +72,12 @@ export default function ConfirmarReservaPantalla() {
   const [horaInicio] = (params.inicio || "00:00").split(":").map(Number);
   const [horaFin] = (params.fin || "00:00").split(":").map(Number);
   const duracionHoras = Math.max(1, horaFin - horaInicio);
-  const precioTotal = duracionHoras * espacio.precioPorHora;
+  const precioRecibido = Number(params.precio);
+  const precioPorHora =
+    params.precio !== undefined && Number.isFinite(precioRecibido)
+      ? precioRecibido
+      : espacio.precioPorHora;
+  const precioTotal = duracionHoras * precioPorHora;
 
   const incrementarPersonas = () => {
     if (cantidadPersonas < espacio.capacidad) {
@@ -93,6 +99,10 @@ export default function ConfirmarReservaPantalla() {
     throw new Error("Debés iniciar sesión para reservar.");
   }
 
+  if (usuario.rol !== "jugador") {
+    throw new Error("Solo los jugadores pueden reservar turnos.");
+  }
+
   const nuevaReserva = await crearReserva(
     {
       turnoId: params.turnoId || "",
@@ -100,7 +110,7 @@ export default function ConfirmarReservaPantalla() {
       fecha: params.fecha || "",
       inicio: params.inicio || "",
       fin: params.fin || "",
-      precio: espacio.precioPorHora,
+      precio: precioPorHora,
       cantidadPersonas,
     },
     usuario.id
