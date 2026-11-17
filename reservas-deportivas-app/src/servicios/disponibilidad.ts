@@ -1,5 +1,6 @@
 import { diasBloqueadosMock, reservasFijasMock, reservasMock } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
+import { obtenerTodasLasReservasLocales } from "@/servicios/dbServicios";
 import { DiaBloqueado, ReservaFija, TurnoSeleccionado, Turno } from "@/tipos/turno";
 
 const HORA_APERTURA = 8 * 60;
@@ -32,7 +33,8 @@ const fijaVigente = (fija: ReservaFija, fecha: string, diaSemana: number) =>
 
 export async function getDisponibilidad(espacioId: string, fecha: string): Promise<Turno[]> {
   return new Promise((resolve, reject) => {
-    setTimeout(() => {
+    setTimeout(async () => {
+      try {
       const espacio = espaciosMock.find((item) => item.id === espacioId && item.activo);
       if (!espacio) {
         reject(new Error("El espacio no existe o no esta disponible."));
@@ -45,7 +47,37 @@ export async function getDisponibilidad(espacioId: string, fecha: string): Promi
       }
 
       const bloqueos = diasBloqueadosMock.filter((item: DiaBloqueado) => item.espacioId === espacioId && item.fecha === fecha);
-      const reservas = reservasMock.filter((item) => item.espacioId === espacioId && item.fecha === fecha);
+      const reservasLocales = await obtenerTodasLasReservasLocales();
+      const reservasLocalesPorId = new Map(reservasLocales.map((reserva) => [reserva.id, reserva]));
+      const reservasEnMemoria = reservasMock.filter((turno) => {
+        if (!turno.reservaId) return true;
+        const reservaLocal = reservasLocalesPorId.get(turno.reservaId);
+        return !reservaLocal || reservaLocal.estado === "confirmada";
+      });
+      const reservasDelEspacio = reservasEnMemoria.filter(
+        (item) => item.espacioId === espacioId && item.fecha === fecha
+      );
+      const idsEnMemoria = new Set(reservasDelEspacio.map((turno) => turno.reservaId));
+      const reservasLocalesActivas: Turno[] = reservasLocales
+        .filter(
+          (reserva) =>
+            reserva.estado === "confirmada" &&
+            reserva.espacioId === espacioId &&
+            reserva.fecha === fecha &&
+            !idsEnMemoria.has(reserva.id)
+        )
+        .map((reserva) => ({
+          id: `turno-${reserva.id}`,
+          espacioId: reserva.espacioId,
+          fecha: reserva.fecha,
+          inicio: reserva.inicio,
+          fin: reserva.fin,
+          estado: "reservado" as const,
+          reservaId: reserva.id,
+          motivoBloqueo: null,
+          precio: reserva.precioPorHora,
+        }));
+      const reservas = [...reservasDelEspacio, ...reservasLocalesActivas];
       const fijas = reservasFijasMock.filter((item: ReservaFija) => item.espacioId === espacioId && fijaVigente(item, fecha, fechaSeleccionada.getDay()));
       const ahora = new Date();
       const hoy = fechaLocal(ahora);
@@ -73,6 +105,9 @@ export async function getDisponibilidad(espacioId: string, fecha: string): Promi
         });
       }
       resolve(resultado);
+      } catch (error) {
+        reject(error);
+      }
     }, 350);
   });
 }

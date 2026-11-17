@@ -7,7 +7,10 @@ import {
   diasBloqueadosMock,
 } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
-import { contarReservasActivasLocales } from "@/servicios/dbServicios";
+import {
+  contarReservasActivasLocales,
+  obtenerTodasLasReservasLocales,
+} from "@/servicios/dbServicios";
 
 
 
@@ -98,6 +101,24 @@ export const crearReserva = async (
     throw new Error("El horario seleccionado ya está ocupado.");
   }
 
+
+  const reservasLocales = await obtenerTodasLasReservasLocales();
+  const turnoOcupadoEnPersistencia = reservasLocales.some(
+    (reserva) =>
+      reserva.estado === "confirmada" &&
+      reserva.espacioId === solicitud.espacioId &&
+      reserva.fecha === solicitud.fecha &&
+      horariosSeSuperponen(
+        solicitud.inicio,
+        solicitud.fin,
+        reserva.inicio,
+        reserva.fin
+      )
+  );
+
+  if (turnoOcupadoEnPersistencia) {
+    throw new Error("Ya existe una reserva confirmada para ese horario.");
+  }
 
   const fechaSeleccionada = new Date(`${solicitud.fecha}T12:00:00`);
   const diaSemana = fechaSeleccionada.getDay();

@@ -64,6 +64,10 @@ export default function ConfirmarReservaPantalla() {
     throw new Error("Debés iniciar sesión para reservar.");
   }
 
+  if (usuario.rol !== "jugador") {
+    throw new Error("Solo los jugadores pueden reservar turnos.");
+  }
+
   const nuevaReserva = await crearReserva(
     {
       espacioId: espacio.id,
