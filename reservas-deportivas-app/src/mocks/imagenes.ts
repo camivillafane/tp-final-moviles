@@ -27,10 +27,10 @@ export const imagenesEspacio: Record<string, string[]> = {
     local(require("../../assets/espacios/fotos/espacio-voley-cancha-03.jpg")),
   ],
 
-  "espacio-05": [
-    local(require("../../assets/espacios/fotos/espacio-natacion-pileta-01.jpg")),
-    local(require("../../assets/espacios/fotos/espacio-natacion-pileta-02.jpg")),
-    local(require("../../assets/espacios/fotos/espacio-natacion-pileta-03.jpg")),
+  "espacio-06": [
+    local(require("../../assets/espacios/fotos/espacio-gimnasio-01.jpg")),
+    local(require("../../assets/espacios/fotos/espacio-gimnasio-02.jpg")),
+    local(require("../../assets/espacios/fotos/espacio-gimnasio-03.jpg")),
   ],
 
   "espacio-07": [
@@ -51,15 +51,21 @@ export const imagenesEspacio: Record<string, string[]> = {
     local(require("../../assets/espacios/fotos/espacio-tenis-cancha2-03.jpg")),
   ],
 
-  "espacio-10": [
-    local(require("../../assets/espacios/fotos/espacio-padel-cancha-01.jpg")),
-    local(require("../../assets/espacios/fotos/espacio-padel-cancha-02.jpg")),
-    local(require("../../assets/espacios/fotos/espacio-padel-cancha-03.jpg")),
+  "espacio-12": [
+    local(require("../../assets/espacios/fotos/espacio-basquet-cancha1-02.jpg")),
+    local(require("../../assets/espacios/fotos/espacio-basquet-cancha1-01.jpg")),
+    local(require("../../assets/espacios/fotos/espacio-basquet-cancha1-03.jpg")),
   ],
 
-  "espacio-11": [
-    local(require("../../assets/espacios/fotos/espacio-atletismo-pista-01.jpg")),
-    local(require("../../assets/espacios/fotos/espacio-atletismo-pista-02.jpg")),
-    local(require("../../assets/espacios/fotos/espacio-atletismo-pista-03.jpg")),
+  "espacio-13": [
+    local(require("../../assets/espacios/fotos/espacio-basquet-cancha1-03.jpg")),
+    local(require("../../assets/espacios/fotos/espacio-basquet-cancha1-02.jpg")),
+    local(require("../../assets/espacios/fotos/espacio-basquet-cancha1-01.jpg")),
+  ],
+
+  "espacio-14": [
+    local(require("../../assets/espacios/fotos/espacio-voley-cancha-01.jpg")),
+    local(require("../../assets/espacios/fotos/espacio-voley-cancha-02.jpg")),
+    local(require("../../assets/espacios/fotos/espacio-voley-cancha-03.jpg")),
   ],
 };
