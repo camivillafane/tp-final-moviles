@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import IonIcons from "@react-native-vector-icons/ionicons";
+import { colores } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
 import { obtenerDetalleReserva } from "@/servicios/reservas";
 import { getEspacioById } from "@/servicios/espacios";
@@ -63,8 +65,13 @@ export default function DetalleReservaPantalla() {
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <ScrollView contentContainerStyle={estilos.contenido}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={estilos.volver}>‹ Volver</Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={estilos.botonVolver}
+          accessibilityRole="button"
+          accessibilityLabel="Volver atrás"
+        >
+          <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
         </Pressable>
 
         <Text style={estilos.titulo}>Detalle de reserva</Text>
@@ -108,6 +115,7 @@ const estilos = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: "#F8F9FA" },
   contenido: { padding: 20 },
   volver: { color: "#2E7D32", fontSize: 16, marginBottom: 20 },
+  botonVolver: { marginBottom: 20 },
   titulo: {
     color: "#1A1A1A",
     fontSize: 22,

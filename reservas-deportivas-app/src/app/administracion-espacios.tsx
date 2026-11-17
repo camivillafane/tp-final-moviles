@@ -202,7 +202,7 @@ export default function AdministracionEspaciosPantalla() {
 
 function VistaMensaje({ mensaje, volver }: { mensaje: string; volver?: () => void }) {
   return (
-    <SafeAreaView style={estilos.contenedor}>
+    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <View style={estilos.centro}>
         <Text style={estilos.textoSecundario}>{mensaje}</Text>
         {volver && (
