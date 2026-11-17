@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,26 +9,56 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { espaciosMock } from "@/mocks/espacios";
+import { getEspacioById } from "@/servicios/espacios";
 import { crearReserva } from "@/servicios/reservas";
 import { guardarReservaLocal } from "@/servicios/dbServicios";
 import { useSesion } from "@/contextos/Sesion";
 import { EstadoConexion } from "@/componentes/EstadoConexion";
+import type { Espacio } from "@/tipos/espacio";
 
 export default function ConfirmarReservaPantalla() {
   const router = useRouter();
   const { usuario } = useSesion();
   const params = useLocalSearchParams<{
+    turnoId: string;
     espacioId: string;
     fecha: string;
     inicio: string;
     fin: string;
+    precio?: string;
   }>();
 
-  const espacio = espaciosMock.find((e) => e.id === params.espacioId);
-
+  const [espacio, setEspacio] = useState<Espacio | null>(null);
+  const [cargandoEspacio, setCargandoEspacio] = useState(true);
   const [cantidadPersonas, setCantidadPersonas] = useState<number>(1);
   const [cargando,setCargando] = useState(false);
+
+  useEffect(() => {
+    let activo = true;
+
+    getEspacioById(params.espacioId)
+      .then((resultado) => {
+        if (activo) setEspacio(resultado);
+      })
+      .catch(() => {
+        if (activo) setEspacio(null);
+      })
+      .finally(() => {
+        if (activo) setCargandoEspacio(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [params.espacioId]);
+
+  if (cargandoEspacio) {
+    return (
+      <SafeAreaView style={estilos.contenedorCentrado}>
+        <Text>Cargando espacio...</Text>
+      </SafeAreaView>
+    );
+  }
 
   if (!espacio) {
     return (
@@ -42,7 +72,12 @@ export default function ConfirmarReservaPantalla() {
   const [horaInicio] = (params.inicio || "00:00").split(":").map(Number);
   const [horaFin] = (params.fin || "00:00").split(":").map(Number);
   const duracionHoras = Math.max(1, horaFin - horaInicio);
-  const precioTotal = duracionHoras * espacio.precioPorHora;
+  const precioRecibido = Number(params.precio);
+  const precioPorHora =
+    params.precio !== undefined && Number.isFinite(precioRecibido)
+      ? precioRecibido
+      : espacio.precioPorHora;
+  const precioTotal = duracionHoras * precioPorHora;
 
   const incrementarPersonas = () => {
     if (cantidadPersonas < espacio.capacidad) {
@@ -64,13 +99,18 @@ export default function ConfirmarReservaPantalla() {
     throw new Error("Debés iniciar sesión para reservar.");
   }
 
+  if (usuario.rol !== "jugador") {
+    throw new Error("Solo los jugadores pueden reservar turnos.");
+  }
+
   const nuevaReserva = await crearReserva(
     {
+      turnoId: params.turnoId || "",
       espacioId: espacio.id,
       fecha: params.fecha || "",
       inicio: params.inicio || "",
       fin: params.fin || "",
-      precio: precioTotal,
+      precio: precioPorHora,
       cantidadPersonas,
     },
     usuario.id

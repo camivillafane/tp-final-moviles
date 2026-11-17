@@ -13,8 +13,8 @@ import { Espacio } from "@/tipos/espacio";
 import { TurnoSeleccionado, Turno } from "@/tipos/turno";
 
 const fechaLegible = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
-const etiquetas: Record<Turno["estado"], string> = { libre: "Libre", reservado: "Reservado", fijo: "Fijo", mantenimiento: "Mantenimiento" };
-const coloresEstado: Record<Turno["estado"], string> = { libre: "#e5f2e8", reservado: "#f3e1e1", fijo: "#eee5f2", mantenimiento: "#f4ecd9" };
+const etiquetas: Record<Turno["estado"], string> = { libre: "Libre", reservado: "Reservado", fijo: "Fijo", mantenimiento: "Bloqueado" };
+const coloresEstado: Record<Turno["estado"], string> = { libre: "#e5f2e8", reservado: "#f3e1e1", fijo: "#eee5f2", mantenimiento: "#f8d7da" };
 
 export default function Disponibilidad() {
   const router = useRouter();
@@ -62,12 +62,12 @@ export default function Disponibilidad() {
             const activo = seleccion?.id === turno.id;
             return <Pressable key={turno.id} disabled={!reservable} onPress={() => { setSeleccion(turno); setSolicitud(null); }} style={[styles.bloque, { backgroundColor: coloresEstado[turno.estado] }, activo && styles.bloqueActivo, !reservable && styles.bloqueDeshabilitado]}>
               <Text style={styles.hora}>{turno.inicio}</Text><Text style={styles.estado}>{turno.estado === "libre" && !reservable ? "Pasado" : etiquetas[turno.estado]}</Text>
-              {turno.motivoBloqueo ? <Text style={styles.motivo}>{turno.motivoBloqueo}</Text> : null}
+              {turno.motivoBloqueo ? <Text style={styles.motivo}>Motivo: {turno.motivoBloqueo}</Text> : null}
             </Pressable>;
           })}
         </View>}
         {seleccion && <View style={styles.confirmacion}>
-          <Text style={styles.seleccionTexto}>Seleccionaste {seleccion.inicio}�{seleccion.fin}</Text>
+          <Text style={styles.seleccionTexto}>Seleccionaste {seleccion.inicio} a {seleccion.fin}</Text>
             <BotonCta
               titulo="Continuar"
               onPress={() => {
@@ -77,6 +77,7 @@ export default function Disponibilidad() {
                 router.push({
                   pathname: "/confirmar-reserva",
                   params: {
+                    turnoId: datos.turnoId,
                     espacioId: datos.espacioId,
                     fecha: datos.fecha,
                     inicio: datos.inicio,
@@ -88,7 +89,6 @@ export default function Disponibilidad() {
             />
         </View>}
         {solicitud && <Text style={styles.mensajeReserva}>Turno listo para reservar: {solicitud.fecha}, {solicitud.inicio} a {solicitud.fin} - {solicitud.precio === 0 ? "Gratis" : `${solicitud.precio.toLocaleString("es-AR")}`}</Text>}
-        <View style={styles.leyenda}>{(["libre", "reservado", "fijo", "mantenimiento"] as const).map((estadoTurno) => <Text key={estadoTurno} style={styles.leyendaTexto}>- {etiquetas[estadoTurno]}</Text>)}</View>
       </ScrollView>
     </View>
   );
