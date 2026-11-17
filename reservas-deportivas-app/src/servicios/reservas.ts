@@ -1,4 +1,5 @@
 import type { Reserva } from "@/tipos/reserva";
+import type { Espacio } from "@/tipos/espacio";
 import type { SolicitudReserva, Turno } from "@/tipos/turno";
 import {
   reservasMock,
@@ -49,27 +50,55 @@ type ContextoReserva = Pick<Reserva, "usuarioId"> &
     >
   > & { turnoId?: string };
 
+function datosTurnoDesdeId(turnoId: string): {
+  espacioId: string;
+  fecha: string;
+  inicio: string;
+  fin: string;
+} | null {
+  const partes = /^tur-(esp-[A-Za-z0-9_-]+)-(\d{4})(\d{2})(\d{2})-(\d{2})$/.exec(turnoId);
+  if (!partes) return null;
+
+  const [, espacioId, anio, mes, dia, hora] = partes;
+  const horaFin = Number(hora) + 1;
+  return {
+    espacioId,
+    fecha: `${anio}-${mes}-${dia}`,
+    inicio: `${hora}:00`,
+    fin: `${String(horaFin).padStart(2, "0")}:00`,
+  };
+}
+
 function normalizarReservaApi(
   datos: ReservaApi,
   contexto: ContextoReserva,
   anterior?: Reserva
 ): Reserva {
-  const precioPorHora = datos.precioPorHora ?? contexto.precioPorHora ?? 0;
+  const turno = datosTurnoDesdeId(datos.turnoId);
+  const espacioId = datos.espacioId || contexto.espacioId || turno?.espacioId || "";
+  const fecha = datos.fecha ?? contexto.fecha ?? turno?.fecha ?? "";
+  const inicio = datos.inicio ?? contexto.inicio ?? turno?.inicio ?? "";
+  const fin = datos.fin ?? contexto.fin ?? turno?.fin ?? "";
+  const precioPorHora =
+    datos.precioPorHora ?? contexto.precioPorHora ?? anterior?.precioPorHora ?? 0;
   const duracionHoras = calcularDuracion(
-    datos.inicio ?? contexto.inicio ?? "00:00",
-    datos.fin ?? contexto.fin ?? "00:00"
+    inicio || "00:00",
+    fin || "00:00"
   );
 
   return {
     id: datos.id,
     usuarioId: datos.usuarioId || contexto.usuarioId,
-    espacioId: datos.espacioId || contexto.espacioId || "",
-    fecha: datos.fecha ?? contexto.fecha ?? "",
-    inicio: datos.inicio ?? contexto.inicio ?? "",
-    fin: datos.fin ?? contexto.fin ?? "",
+    espacioId,
+    fecha,
+    inicio,
+    fin,
     cantidadPersonas: datos.cantidadPersonas ?? contexto.cantidadPersonas ?? 1,
     precioPorHora,
-    precioTotal: anterior?.precioTotal ?? precioPorHora * duracionHoras,
+    precioTotal:
+      anterior?.precioTotal && anterior.precioTotal > 0
+        ? anterior.precioTotal
+        : precioPorHora * duracionHoras,
     estado: datos.estado,
     qrToken: datos.codigoQr,
     creadaEn: datos.creadaEn || anterior?.creadaEn || new Date().toISOString(),
@@ -341,17 +370,23 @@ export async function obtenerDetalleReserva(
   if (USAR_MOCKS) return obtenerReservaLocal(reservaId, usuarioId);
 
   try {
+    const reservaAnterior = await obtenerReservaLocal(reservaId, usuarioId);
     const datos = await getUno<ReservaApi>(`/reservas/${encodeURIComponent(reservaId)}`);
+    const precioEspacio =
+      reservaAnterior?.precioPorHora && reservaAnterior.precioPorHora > 0
+        ? reservaAnterior.precioPorHora
+        : (await getUno<Espacio>(`/espacios/${datos.espacioId}`).catch(() => null))
+            ?.precioPorHora;
     const reserva = await normalizarReservaApi(datos, {
       usuarioId,
       turnoId: datos.turnoId,
-      espacioId: datos.espacioId,
-      fecha: datos.fecha,
-      inicio: datos.inicio,
-      fin: datos.fin,
+      espacioId: reservaAnterior?.espacioId ?? datos.espacioId,
+      fecha: reservaAnterior?.fecha || datos.fecha,
+      inicio: reservaAnterior?.inicio || datos.inicio,
+      fin: reservaAnterior?.fin || datos.fin,
       cantidadPersonas: datos.cantidadPersonas,
-      precioPorHora: datos.precioPorHora,
-    });
+      precioPorHora: datos.precioPorHora ?? precioEspacio,
+    }, reservaAnterior ?? undefined);
     await guardarReservaLocal(reserva);
     return reserva;
   } catch (error) {
