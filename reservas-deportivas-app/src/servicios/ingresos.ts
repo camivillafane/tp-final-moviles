@@ -2,7 +2,19 @@
 import { abrirBaseDeDatos } from "@/servicios/dbServicios";
 import type { Reserva } from "@/tipos/reserva";
 
-async function crearTablaAsistencias(db: Awaited<ReturnType<typeof abrirBaseDeDatos>>) {
+type BaseDeDatos = Awaited<ReturnType<typeof abrirBaseDeDatos>>;
+
+async function asegurarTablasAsistencia(db: BaseDeDatos): Promise<void> {
+    await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS ingresos_locales (
+            reservaId TEXT PRIMARY KEY NOT NULL,
+            usuarioId TEXT NOT NULL,
+            espacioId TEXT NOT NULL,
+            encargadoId TEXT NOT NULL,
+            fechaIngreso TEXT NOT NULL
+        );
+    `);
+
     await db.execAsync(`
         CREATE TABLE IF NOT EXISTS asistencias_locales (
             reservaId TEXT PRIMARY KEY NOT NULL,
@@ -20,18 +32,7 @@ export async function registrarIngreso(
     encargadoId: string
 ): Promise<boolean> {
     const db = await abrirBaseDeDatos();
-
-    await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS ingresos_locales (
-            reservaId TEXT PRIMARY KEY NOT NULL,
-            usuarioId TEXT NOT NULL,
-            espacioId TEXT NOT NULL,
-            encargadoId TEXT NOT NULL,
-            fechaIngreso TEXT NOT NULL
-        );
-    `);
-
-    await crearTablaAsistencias(db);
+    await asegurarTablasAsistencia(db);
 
     const ingresoExistente = await db.getFirstAsync<{ reservaId: string }>(
         "SELECT reservaId FROM ingresos_locales WHERE reservaId = ?;",
@@ -84,8 +85,7 @@ export async function registrarAusencia(
     encargadoId: string
 ): Promise<boolean> {
     const db = await abrirBaseDeDatos();
-
-    await crearTablaAsistencias(db);
+    await asegurarTablasAsistencia(db);
 
     const ingresoExistente = await db.getFirstAsync<{ reservaId: string }>(
         "SELECT reservaId FROM ingresos_locales WHERE reservaId = ?;",
@@ -121,8 +121,7 @@ export async function obtenerAsistenciasLocales(): Promise<
     { reservaId: string; estado: string }[]
 > {
     const db = await abrirBaseDeDatos();
-
-    await crearTablaAsistencias(db);
+    await asegurarTablasAsistencia(db);
 
     return await db.getAllAsync<{ reservaId: string; estado: string }>(
         `SELECT reservaId, estado FROM asistencias_locales;`

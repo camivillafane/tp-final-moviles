@@ -27,6 +27,12 @@ export default function Disponibilidad() {
   const [solicitud, setSolicitud] = useState<TurnoSeleccionado | null>(null);
   const [estado, setEstado] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState("No se pudo cargar la disponibilidad.");
+  const [ahora, setAhora] = useState(() => new Date());
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 30_000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   const cargar = useCallback(async () => {
     if (!id) { setError("Falta indicar el espacio."); setEstado("error"); return; }
@@ -60,8 +66,9 @@ export default function Disponibilidad() {
           {turnos.map((turno) => {
             const reservable = prepararSolicitudReserva(turno) !== null;
             const activo = seleccion?.id === turno.id;
-            return <Pressable key={turno.id} disabled={!reservable} onPress={() => { setSeleccion(turno); setSolicitud(null); }} style={[styles.bloque, { backgroundColor: coloresEstado[turno.estado] }, activo && styles.bloqueActivo, !reservable && styles.bloqueDeshabilitado]}>
-              <Text style={styles.hora}>{turno.inicio}</Text><Text style={styles.estado}>{turno.estado === "libre" && !reservable ? "Pasado" : etiquetas[turno.estado]}</Text>
+            const esPasado = terminoTurno(fecha, turno.fin, ahora);
+            return <Pressable key={turno.id} disabled={!reservable} onPress={() => { setSeleccion(turno); setSolicitud(null); }} style={[styles.bloque, { backgroundColor: coloresEstado[turno.estado] }, esPasado && styles.bloquePasado, activo && styles.bloqueActivo, !reservable && styles.bloqueDeshabilitado]}>
+              <Text style={styles.hora}>{turno.inicio}</Text><Text style={styles.estado}>{esPasado ? `Pasado · ${etiquetas[turno.estado]}` : etiquetas[turno.estado]}</Text>
               {turno.motivoBloqueo ? <Text style={styles.motivo}>Motivo: {turno.motivoBloqueo}</Text> : null}
             </Pressable>;
           })}
@@ -94,7 +101,14 @@ export default function Disponibilidad() {
   );
 }
 
-const styles = StyleSheet.create({ contenedor: { flex: 1, backgroundColor: colores.fondo }, contenido: { padding: 16, paddingBottom: 36 }, titulo: { color: colores.textoOscuro, fontSize: 22, fontWeight: "700" }, subtitulo: { color: colores.verdeGrisaceo, marginTop: 5 }, fechas: { gap: 8, paddingVertical: 18 }, fecha: { backgroundColor: colores.blanco, borderColor: colores.borde, borderRadius: 12, borderWidth: 1, padding: 12 }, fechaActiva: { backgroundColor: colores.verdePrincipal, borderColor: colores.verdePrincipal }, fechaTexto: { color: colores.textoOscuro, textTransform: "capitalize" }, fechaTextoActiva: { color: colores.blanco, fontWeight: "700" }, seccion: { color: colores.textoOscuro, fontSize: 17, fontWeight: "700", marginBottom: 12 }, grilla: { flexDirection: "row", flexWrap: "wrap", gap: 8 }, bloque: { borderColor: colores.borde, borderRadius: 10, borderWidth: 1, minHeight: 74, justifyContent: "center", padding: 10, width: "31%" }, bloqueActivo: { borderColor: colores.magentaPrincipal, borderWidth: 2 }, bloqueDeshabilitado: { opacity: 0.72 }, hora: { color: colores.textoOscuro, fontSize: 16, fontWeight: "700" }, estado: { color: colores.textoOscuro, fontSize: 12, marginTop: 3 }, motivo: { color: colores.verdeGrisaceo, fontSize: 10, marginTop: 3 }, confirmacion: { gap: 12, marginTop: 20 }, seleccionTexto: { color: colores.textoOscuro, fontWeight: "600" }, mensajeReserva: { color: colores.verdePrincipal, fontWeight: "600", marginTop: 12 }, leyenda: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 24 }, leyendaTexto: { color: colores.textoOscuro, fontSize: 12 } });
+const styles = StyleSheet.create({ contenedor: { flex: 1, backgroundColor: colores.fondo }, contenido: { padding: 16, paddingBottom: 36 }, titulo: { color: colores.textoOscuro, fontSize: 22, fontWeight: "700" }, subtitulo: { color: colores.verdeGrisaceo, marginTop: 5 }, fechas: { gap: 8, paddingVertical: 18 }, fecha: { backgroundColor: colores.blanco, borderColor: colores.borde, borderRadius: 12, borderWidth: 1, padding: 12 }, fechaActiva: { backgroundColor: colores.verdePrincipal, borderColor: colores.verdePrincipal }, fechaTexto: { color: colores.textoOscuro, textTransform: "capitalize" }, fechaTextoActiva: { color: colores.blanco, fontWeight: "700" }, seccion: { color: colores.textoOscuro, fontSize: 17, fontWeight: "700", marginBottom: 12 }, grilla: { flexDirection: "row", flexWrap: "wrap", gap: 8 }, bloque: { borderColor: colores.borde, borderRadius: 10, borderWidth: 1, minHeight: 74, justifyContent: "center", padding: 10, width: "31%" }, bloquePasado: { backgroundColor: "#ECEFF1", borderColor: "#A6AFB5" }, bloqueActivo: { borderColor: colores.magentaPrincipal, borderWidth: 2 }, bloqueDeshabilitado: { opacity: 0.72 }, hora: { color: colores.textoOscuro, fontSize: 16, fontWeight: "700" }, estado: { color: colores.textoOscuro, fontSize: 12, marginTop: 3 }, motivo: { color: colores.verdeGrisaceo, fontSize: 10, marginTop: 3 }, confirmacion: { gap: 12, marginTop: 20 }, seleccionTexto: { color: colores.textoOscuro, fontWeight: "600" }, mensajeReserva: { color: colores.verdePrincipal, fontWeight: "600", marginTop: 12 }, leyenda: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 24 }, leyendaTexto: { color: colores.textoOscuro, fontSize: 12 } });
+
+function terminoTurno(fecha: string, horaFin: string, ahora: Date): boolean {
+  const [anio, mes, dia] = fecha.split("-").map(Number);
+  const [hora, minuto] = horaFin.split(":").map(Number);
+  if (![anio, mes, dia, hora, minuto].every(Number.isFinite)) return false;
+  return new Date(anio, mes - 1, dia, hora, minuto).getTime() <= ahora.getTime();
+}
 
 
 
