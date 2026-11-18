@@ -1,10 +1,11 @@
-import type { ComponentProps } from "react";
+import { useMemo, type ComponentProps } from "react";
 import { Modal, View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import IonIcons from "@react-native-vector-icons/ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AvatarUsuario } from "@/componentes/AvatarUsuario";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { roles } from "@/constantes/roles";
 import { Usuario } from "@/tipos/usuario";
 
@@ -36,7 +37,15 @@ export function MenuPerfil({
 }: PerfilMenuProps) {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const opciones: OpcionMenu[] = [];
+    const paleta = usePaleta();
+    const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+    const opciones: OpcionMenu[] = [
+        {
+            etiqueta: "Configuraciones",
+            icono: "settings-outline",
+            destino: "/configuraciones" as any,
+        },
+    ];
 
     if (!usuario) {
         opciones.push(
@@ -162,13 +171,13 @@ export function MenuPerfil({
                                 <IonIcons
                                     name={opcion.icono}
                                     size={22}
-                                    color={colores.verdePrincipal}
+                                    color={paleta.verdePrincipal}
                                 />
                                 <Text style={estilos.opcionTexto}>{opcion.etiqueta}</Text>
                                 <IonIcons
                                     name="chevron-forward"
                                     size={18}
-                                    color={colores.verdeGrisaceo}
+                                    color={paleta.verdeGrisaceo}
                                 />
                             </Pressable>
                         ))}
@@ -183,7 +192,7 @@ export function MenuPerfil({
                             <IonIcons
                                 name="log-out-outline"
                                 size={22}
-                                color={colores.magentaPrincipal}
+                                color={paleta.magentaPrincipal}
                             />
                             <Text style={estilos.cerrarSesionTexto}>Cerrar sesión</Text>
                         </Pressable>
@@ -194,83 +203,84 @@ export function MenuPerfil({
     );
 }
 
-const estilos = StyleSheet.create({
-    fondo: {
-        backgroundColor: "rgba(0, 0, 0, 0.45)",
-        flex: 1,
-        justifyContent: "flex-end",
-    },
-    hoja: {
-        backgroundColor: colores.blanco,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        paddingHorizontal: 20,
-        paddingTop: 20,
-    },
-    encabezadoUsuario: {
-        alignItems: "center",
-        flexDirection: "row",
-        gap: 12,
-    },
-    encabezadoTexto: {
-        flex: 1,
-    },
-    titulo: {
-        color: colores.textoOscuro,
-        fontSize: 20,
-        fontWeight: "700",
-    },
-    descripcion: {
-        color: colores.verdeGrisaceo,
-        fontSize: 14,
-        lineHeight: 20,
-        marginTop: 4,
-    },
-    nombre: {
-        color: colores.textoOscuro,
-        fontSize: 18,
-        fontWeight: "700",
-    },
-    email: {
-        color: colores.verdeGrisaceo,
-        fontSize: 13,
-        marginTop: 2,
-    },
-    rol: {
-        color: colores.verdePrincipal,
-        fontSize: 12,
-        fontWeight: "700",
-        marginTop: 4,
-        textTransform: "uppercase",
-    },
-    opciones: {
-        borderTopColor: colores.borde,
-        borderTopWidth: 1,
-        marginTop: 16,
-    },
-    opcion: {
-        alignItems: "center",
-        borderBottomColor: colores.borde,
-        borderBottomWidth: 1,
-        flexDirection: "row",
-        gap: 12,
-        paddingVertical: 16,
-    },
-    opcionTexto: {
-        color: colores.textoOscuro,
-        flex: 1,
-        fontSize: 16,
-        fontWeight: "500",
-    },
-    cerrarSesion: {
-        alignItems: "center",
-        flexDirection: "row",
-        gap: 12,
-        paddingVertical: 16,
-    },
-    cerrarSesionTexto: {
-        color: colores.magentaPrincipal,
-        fontSize: 16,
-        fontWeight: "700",
-    },
-});
+const crearEstilos = (paleta: Paleta) =>
+    StyleSheet.create({
+        fondo: {
+            backgroundColor: paleta.overlay,
+            flex: 1,
+            justifyContent: "flex-end",
+        },
+        hoja: {
+            backgroundColor: paleta.superficie,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            paddingHorizontal: 20,
+            paddingTop: 20,
+        },
+        encabezadoUsuario: {
+            alignItems: "center",
+            flexDirection: "row",
+            gap: 12,
+        },
+        encabezadoTexto: {
+            flex: 1,
+        },
+        titulo: {
+            color: paleta.textoOscuro,
+            fontSize: 20,
+            fontWeight: "700",
+        },
+        descripcion: {
+            color: paleta.verdeGrisaceo,
+            fontSize: 14,
+            lineHeight: 20,
+            marginTop: 4,
+        },
+        nombre: {
+            color: paleta.textoOscuro,
+            fontSize: 18,
+            fontWeight: "700",
+        },
+        email: {
+            color: paleta.verdeGrisaceo,
+            fontSize: 13,
+            marginTop: 2,
+        },
+        rol: {
+            color: paleta.verdePrincipal,
+            fontSize: 12,
+            fontWeight: "700",
+            marginTop: 4,
+            textTransform: "uppercase",
+        },
+        opciones: {
+            borderTopColor: paleta.bordeSuave,
+            borderTopWidth: 1,
+            marginTop: 16,
+        },
+        opcion: {
+            alignItems: "center",
+            borderBottomColor: paleta.bordeSuave,
+            borderBottomWidth: 1,
+            flexDirection: "row",
+            gap: 12,
+            paddingVertical: 16,
+        },
+        opcionTexto: {
+            color: paleta.textoOscuro,
+            flex: 1,
+            fontSize: 16,
+            fontWeight: "500",
+        },
+        cerrarSesion: {
+            alignItems: "center",
+            flexDirection: "row",
+            gap: 12,
+            paddingVertical: 16,
+        },
+        cerrarSesionTexto: {
+            color: paleta.magentaPrincipal,
+            fontSize: 16,
+            fontWeight: "700",
+        },
+    });

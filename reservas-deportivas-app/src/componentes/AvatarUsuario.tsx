@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { StyleSheet, View, Text } from "react-native";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 
 interface AvatarUsuario {
     nombre: string;
@@ -7,6 +9,8 @@ interface AvatarUsuario {
 }
 
 export function AvatarUsuario({ nombre, tamaño }: AvatarUsuario) {
+    const paleta = usePaleta();
+    const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
     const iniciales = nombre
         .split(" ")
         .map((palabra) => palabra.charAt(0).toUpperCase())
@@ -18,7 +22,7 @@ export function AvatarUsuario({ nombre, tamaño }: AvatarUsuario) {
                 estilos.circulo,
                 { borderRadius: tamaño / 2, width: tamaño, height: tamaño },
             ]}
-        >   
+        >
             <Text style={[estilos.iniciales, { fontSize: tamaño / 2 }]}>
                 {iniciales}
             </Text>
@@ -26,15 +30,16 @@ export function AvatarUsuario({ nombre, tamaño }: AvatarUsuario) {
     );
 }
 
-const estilos = StyleSheet.create({
-    circulo: {
-        backgroundColor: colores.verdePrincipal,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    iniciales: {
-        color: colores.blanco,
-        fontWeight: "700",
-        textTransform: "uppercase",
-    },
-});
+const crearEstilos = (paleta: Paleta) =>
+    StyleSheet.create({
+        circulo: {
+            backgroundColor: paleta.verdeBoton,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        iniciales: {
+            color: paleta.textoInvertido,
+            fontWeight: "700",
+            textTransform: "uppercase",
+        },
+    });
