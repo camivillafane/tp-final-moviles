@@ -47,6 +47,14 @@ export function MenuPerfil({
         },
     ];
 
+    if (__DEV__) {
+        opciones.push({
+            etiqueta: "Probar notificaciones",
+            icono: "notifications-outline",
+            destino: "/prueba-notificaciones" as any,
+        });
+    }
+
     if (!usuario) {
         opciones.push(
             {

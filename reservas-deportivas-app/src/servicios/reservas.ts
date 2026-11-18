@@ -10,6 +10,7 @@ import { espaciosMock } from "@/mocks/espacios";
 import { USAR_MOCKS } from "@/servicios/config";
 import { getLista, getUno, post } from "@/servicios/cliente";
 import { ErrorServicio } from "@/servicios/errores";
+import { cancelarRecordatorioReserva } from "@/servicios/notificacionesLocales";
 import {
   contarReservasActivasLocales,
   guardarReservaLocal,
@@ -509,11 +510,13 @@ export async function cancelarReserva(
       reservaAnterior ?? undefined
     );
     await guardarReservaLocal(reserva);
+    await cancelarRecordatorioReserva(reservaId);
     return reserva;
   }
 
   await cancelarReservaLocal(reservaId, usuarioId);
   const reserva = await obtenerReservaLocal(reservaId, usuarioId);
   if (!reserva) throw new Error("No se encontró la reserva especificada.");
+  await cancelarRecordatorioReserva(reservaId);
   return reserva;
 };
