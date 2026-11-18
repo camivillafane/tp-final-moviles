@@ -57,7 +57,8 @@ export default function Home() {
       setEspacios(datos);
       setEstado("success");
     } catch (e) {
-      setError("No se pudieron cargar los espacios. Intentá de nuevo.");
+      console.error("Error al cargar espacios:", e);
+      setError(e instanceof Error ? e.message : "No se pudieron cargar los espacios. Intentá de nuevo.");
       setEstado("error");
     }
   }, []);
@@ -81,8 +82,9 @@ export default function Home() {
     try {
       const { datos } = await listarEspacios();
       setEspacios(datos);
-    } catch {
-      setError("No se pudieron cargar los espacios. Intentalo nuevamente.");
+    } catch (e) {
+      console.error("Error al refrescar espacios:", e);
+      setError(e instanceof Error ? e.message : "No se pudieron cargar los espacios. Intentalo nuevamente.");
       setEstado("error");
     } finally {
       setRefrescando(false);

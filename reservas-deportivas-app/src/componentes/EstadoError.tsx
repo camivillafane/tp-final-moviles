@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
 import { colores } from "@/constantes/colores";
 
@@ -12,7 +13,7 @@ export function EstadoError({
   onReintentar,
 }: EstadoErrorProps) {
   return (
-    <View style={estilos.contenedor}>
+    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <IonIcons name="alert-circle-outline" size={48} color={colores.magentaPrincipal} />
       <Text style={estilos.mensaje}>{mensaje}</Text>
       {onReintentar && (
@@ -20,7 +21,7 @@ export function EstadoError({
           <Text style={estilos.textoBoton}>Reintentar</Text>
         </Pressable>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

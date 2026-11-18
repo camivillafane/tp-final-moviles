@@ -36,16 +36,13 @@ const fijaVigente = (fija: ReservaFija, fecha: string, diaSemana: number) =>
   fija.diaSemana === diaSemana && fecha >= fija.vigenteDesde && (!fija.vigenteHasta || fecha <= fija.vigenteHasta);
 
 export async function getDisponibilidad(espacioId: string, fecha: string): Promise<Turno[]> {
-  const espacio = espaciosMock.find((item) => item.id === espacioId && item.activo);
-  if (!espacio) throw new Error("El espacio no existe o no esta disponible.");
-
   const fechaSeleccionada = new Date(`${fecha}T12:00:00`);
   if (Number.isNaN(fechaSeleccionada.getTime()) || fechaLocal(fechaSeleccionada) !== fecha) {
     throw new Error("La fecha seleccionada no es valida.");
   }
 
-  const espacioApiId = obtenerIdEspacioApi(espacioId);
-  if (espacioApiId) {
+  if (!USAR_MOCKS) {
+    const espacioApiId = obtenerIdEspacioApi(espacioId) ?? espacioId;
     const [respuesta, reservasLocales] = await Promise.all([
       getLista<Turno>(`/espacios/${espacioApiId}/turnos`, { fecha, porPagina: 100 }),
       obtenerTodasLasReservasLocales(),
@@ -77,83 +74,88 @@ export async function getDisponibilidad(espacioId: string, fecha: string): Promi
     return turnos;
   }
 
+  const espacio = espaciosMock.find((item) => item.id === espacioId && item.activo);
+  if (!espacio) throw new Error("El espacio no existe o no esta disponible.");
+
   return new Promise((resolve, reject) => {
     setTimeout(async () => {
       try {
-      const espacio = espaciosMock.find((item) => item.id === espacioId && item.activo);
-      if (!espacio) {
-        reject(new Error("El espacio no existe o no esta disponible."));
-        return;
-      }
-      const fechaSeleccionada = new Date(`${fecha}T12:00:00`);
-      if (Number.isNaN(fechaSeleccionada.getTime()) || fechaLocal(fechaSeleccionada) !== fecha) {
-        reject(new Error("La fecha seleccionada no es valida."));
-        return;
-      }
+        if (SIMULAR_ERROR_RED) {
+          reject(new Error("No pudimos conectarnos. Revisá tu internet."));
+          return;
+        }
 
-      const bloqueos = diasBloqueadosMock.filter((item: DiaBloqueado) => item.espacioId === espacioId && item.fecha === fecha);
-      const reservasLocales = await obtenerTodasLasReservasLocales();
-      const reservasLocalesPorId = new Map(reservasLocales.map((reserva) => [reserva.id, reserva]));
-      const reservasEnMemoria = reservasMock.filter((turno) => {
-        if (!turno.reservaId) return true;
-        const reservaLocal = reservasLocalesPorId.get(turno.reservaId);
-        return !reservaLocal || reservaLocal.estado === "confirmada";
-      });
-      const reservasDelEspacio = reservasEnMemoria.filter(
-        (item) => item.espacioId === espacioId && item.fecha === fecha
-      );
-      const idsEnMemoria = new Set(reservasDelEspacio.map((turno) => turno.reservaId));
-      const reservasLocalesActivas: Turno[] = reservasLocales
-        .filter(
-          (reserva) =>
-            reserva.estado === "confirmada" &&
-            reserva.espacioId === espacioId &&
-            reserva.fecha === fecha &&
-            !idsEnMemoria.has(reserva.id)
-        )
-        .map((reserva) => ({
-          id: `turno-${reserva.id}`,
-          espacioId: reserva.espacioId,
-          fecha: reserva.fecha,
-          inicio: reserva.inicio,
-          fin: reserva.fin,
-          estado: "reservado" as const,
-          reservaId: reserva.id,
-          motivoBloqueo: null,
-          precio: reserva.precioPorHora,
-        }));
-      const reservas = [...reservasDelEspacio, ...reservasLocalesActivas];
-      const fijas = reservasFijasMock.filter((item: ReservaFija) => item.espacioId === espacioId && fijaVigente(item, fecha, fechaSeleccionada.getDay()));
-      const ahora = new Date();
-      const hoy = fechaLocal(ahora);
-      const resultado: Turno[] = [];
-
-      for (let inicio = HORA_APERTURA; inicio < HORA_CIERRE; inicio += DURACION_BLOQUE_MINUTOS) {
-        const fin = inicio + DURACION_BLOQUE_MINUTOS;
-        const inicioHora = horaDesdeMinutos(inicio);
-        const finHora = horaDesdeMinutos(fin);
-        const reserva = reservas.find((item) => seSuperponen(inicio, fin, minutos(item.inicio), minutos(item.fin)));
-        const fija = fijas.find((item) => seSuperponen(inicio, fin, minutos(item.inicio), minutos(item.fin)));
-        const bloqueado = bloqueos[0];
-        const estado = bloqueado ? "mantenimiento" : reserva ? "reservado" : fija ? "fijo" : "libre";
-
-        resultado.push({
-          id: `${espacioId}-${fecha}-${inicioHora}`,
-          espacioId,
-          fecha,
-          inicio: inicioHora,
-          fin: finHora,
-          estado,
-          reservaId: reserva?.reservaId ?? null,
-          motivoBloqueo: bloqueado?.motivo ?? null,
-          precio: espacio.precioPorHora,
+        const bloqueos = diasBloqueadosMock.filter(
+          (item: DiaBloqueado) => item.espacioId === espacioId && item.fecha === fecha
+        );
+        const reservasLocales = await obtenerTodasLasReservasLocales();
+        const reservasLocalesPorId = new Map(reservasLocales.map((reserva) => [reserva.id, reserva]));
+        const reservasEnMemoria = reservasMock.filter((turno) => {
+          if (!turno.reservaId) return true;
+          const reservaLocal = reservasLocalesPorId.get(turno.reservaId);
+          return !reservaLocal || reservaLocal.estado === "confirmada";
         });
-      }
-      resolve(resultado);
+        const reservasDelEspacio = reservasEnMemoria.filter(
+          (item) => item.espacioId === espacioId && item.fecha === fecha
+        );
+        const idsEnMemoria = new Set(reservasDelEspacio.map((turno) => turno.reservaId));
+        const reservasLocalesActivas: Turno[] = reservasLocales
+          .filter(
+            (reserva) =>
+              reserva.estado === "confirmada" &&
+              reserva.espacioId === espacioId &&
+              reserva.fecha === fecha &&
+              !idsEnMemoria.has(reserva.id)
+          )
+          .map((reserva) => ({
+            id: `turno-${reserva.id}`,
+            espacioId: reserva.espacioId,
+            fecha: reserva.fecha,
+            inicio: reserva.inicio,
+            fin: reserva.fin,
+            estado: "reservado" as const,
+            reservaId: reserva.id,
+            motivoBloqueo: null,
+            precio: reserva.precioPorHora,
+          }));
+        const reservas = [...reservasDelEspacio, ...reservasLocalesActivas];
+        const fijas = reservasFijasMock.filter(
+          (item: ReservaFija) =>
+            item.espacioId === espacioId &&
+            fijaVigente(item, fecha, fechaSeleccionada.getDay())
+        );
+        const resultado: Turno[] = [];
+
+        for (let inicio = HORA_APERTURA; inicio < HORA_CIERRE; inicio += DURACION_BLOQUE_MINUTOS) {
+          const fin = inicio + DURACION_BLOQUE_MINUTOS;
+          const inicioHora = horaDesdeMinutos(inicio);
+          const finHora = horaDesdeMinutos(fin);
+          const reserva = reservas.find((item) =>
+            seSuperponen(inicio, fin, minutos(item.inicio), minutos(item.fin))
+          );
+          const fija = fijas.find((item) =>
+            seSuperponen(inicio, fin, minutos(item.inicio), minutos(item.fin))
+          );
+          const bloqueado = bloqueos[0];
+          const estado = bloqueado ? "mantenimiento" : reserva ? "reservado" : fija ? "fijo" : "libre";
+
+          resultado.push({
+            id: `${espacioId}-${fecha}-${inicioHora}`,
+            espacioId,
+            fecha,
+            inicio: inicioHora,
+            fin: finHora,
+            estado,
+            reservaId: reserva?.reservaId ?? null,
+            motivoBloqueo: bloqueado?.motivo ?? null,
+            precio: espacio.precioPorHora,
+          });
+        }
+        resolve(resultado);
       } catch (error) {
         reject(error);
       }
-    }, 350);
+    }, DEMORA_MOCK_MS);
   });
 }
 

@@ -15,6 +15,10 @@ const http=axios.create({
   headers:SIMULAR ? {"X-Simular": SIMULAR} : {},
 });
 
+if (__DEV__) {
+  console.log("Base URL de la API:", URL_API ?? "NO CONFIGURADA");
+}
+
 http.interceptors.request.use(async (config) => {
   const token = await recuperarToken();
 
@@ -29,6 +33,15 @@ function traducir(error: unknown): ErrorServicio {
   if (error instanceof ErrorServicio) return error;
 
   if (axios.isAxiosError(error)) {
+    if (!error.response && __DEV__) {
+      console.error("Error de red al llamar a la API:", {
+        codigo: error.code,
+        mensaje: error.message,
+        baseURL: error.config?.baseURL,
+        ruta: error.config?.url,
+      });
+    }
+
     const cuerpo = error.response?.data;
 
     if (cuerpo && typeof cuerpo === "object" && "error" in cuerpo) {

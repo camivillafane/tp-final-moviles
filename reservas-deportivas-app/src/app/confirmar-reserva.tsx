@@ -4,11 +4,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Alert,
   ScrollView,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import IonIcons from "@react-native-vector-icons/ionicons";
+import { colores } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
 import { crearReserva } from "@/servicios/reservas";
 import { guardarReservaLocal } from "@/servicios/dbServicios";
@@ -54,7 +57,7 @@ export default function ConfirmarReservaPantalla() {
 
   if (cargandoEspacio) {
     return (
-      <SafeAreaView style={estilos.contenedorCentrado}>
+      <SafeAreaView style={estilos.contenedorCentrado} edges={["top", "bottom"]}>
         <Text>Cargando espacio...</Text>
       </SafeAreaView>
     );
@@ -62,7 +65,7 @@ export default function ConfirmarReservaPantalla() {
 
   if (!espacio) {
     return (
-      <SafeAreaView style={estilos.contenedorCentrado}>
+      <SafeAreaView style={estilos.contenedorCentrado} edges={["top", "bottom"]}>
         <Text style={estilos.textoError}>Espacio no encontrado.</Text>
       </SafeAreaView>
     );
@@ -139,6 +142,19 @@ export default function ConfirmarReservaPantalla() {
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <EstadoConexion />
       <ScrollView contentContainerStyle={estilos.contenido}>
+        <Pressable
+          onPress={() => router.back()}
+          style={estilos.botonVolver}
+          accessibilityRole="button"
+          accessibilityLabel="Volver atrás"
+        >
+          <IonIcons
+            name="arrow-back"
+            size={26}
+            color={colores.verdePrincipal}
+          />
+        </Pressable>
+
         <Text style={estilos.titulo}>Confirmar Reserva</Text>
 
         <View style={estilos.tarjeta}>
@@ -220,6 +236,9 @@ const estilos = StyleSheet.create({
   },
   contenido: {
     padding: 20,
+  },
+  botonVolver: {
+    marginBottom: 16,
   },
   titulo: {
     fontSize: 22,
