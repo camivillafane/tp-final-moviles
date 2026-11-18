@@ -8,9 +8,9 @@ import { listaMock, respuestaMock } from "./mock";
 import { obtenerIdEspacioApi } from "./mapeoEspacios";
 import { estaSinConexion } from "@/servicios/conexion";
 import {
-  guardarEspaciosCache,
-  obtenerEspaciosCache,
-} from "@/servicios/cacheEspacios";
+  guardarCatalogo,
+  obtenerCatalogo,
+} from "@/servicios/catalogoCache";
 
 interface FiltrosEspacios {
   pagina?: number;
@@ -21,95 +21,13 @@ interface FiltrosEspacios {
   techado?: boolean;
 }
 
-async function preciosApiPorEspacio(): Promise<Map<string, number>> {
-  try {
-    const { datos } = await getLista<Espacio>("/espacios", {
-      pagina: 1,
-      porPagina: 100,
-    });
+const CANTIDAD_MAXIMA_CATALOGO = 100;
 
-    return new Map(
-      datos.map((espacio) => [espacio.id, espacio.precioPorHora])
-    );
-  } catch {
-    return new Map();
-  }
-}
-
-function generarClaveCache(filtros: FiltrosEspacios): string {
-  const filtrosOrdenados = Object.entries(filtros).sort(
-    ([a], [b]) => a.localeCompare(b)
-  );
-
-  return JSON.stringify(filtrosOrdenados);
-}
-
-export async function listarEspacios(
-  filtros: FiltrosEspacios = {}
-): Promise<RespuestaLista<Espacio>> {
-  if (!USAR_MOCKS) {
-    const clave = generarClaveCache(filtros);
-
-    // Sin conexión: consultar SQLite directamente.
-    if (await estaSinConexion()) {
-      const cache = await obtenerEspaciosCache(clave);
-
-      if (cache) {
-        return cache;
-      }
-
-      throw new ErrorServicio(
-        "ERROR_RED",
-        "No hay conexión y todavía no se guardó el catálogo de espacios en este dispositivo."
-      );
-    }
-
-    try {
-      const respuesta = await getLista<Espacio>(
-        "/espacios",
-        filtros as Record<string, unknown>
-      );
-
-      // Si falla el guardado local, no interrumpimos la respuesta online.
-      try {
-        await guardarEspaciosCache(clave, respuesta);
-      } catch (error) {
-        if (__DEV__) {
-          console.warn("No se pudo guardar el catálogo offline:", error);
-        }
-      }
-
-      return respuesta;
-    } catch (error) {
-      // Si falla la API por un problema de red, usamos SQLite.
-      if (
-        error instanceof ErrorServicio &&
-        error.codigo === "ERROR_RED"
-      ) {
-        const cache = await obtenerEspaciosCache(clave);
-
-        if (cache) {
-          return cache;
-        }
-      }
-
-      throw error;
-    }
-  }
-
-  // Modo mocks.
-  let datos = espaciosMock.filter((espacio) => espacio.activo);
-
-  const preciosApi = await preciosApiPorEspacio();
-
-  datos = datos.map((espacio) => {
-    const idApi = obtenerIdEspacioApi(espacio.id);
-    const precioApi = idApi ? preciosApi.get(idApi) : undefined;
-
-    return precioApi === undefined
-      ? espacio
-      : { ...espacio, precioPorHora: precioApi };
-  });
+function filtrarEspacios(
+  espacios: Espacio[],
+  filtros: FiltrosEspacios
+): Espacio[] {
+  let datos = espacios.filter((espacio) => espacio.activo);
 
   if (filtros.deporteId) {
     datos = datos.filter(
@@ -119,7 +37,10 @@ export async function listarEspacios(
 
   if (filtros.complejo) {
     datos = datos.filter(
-      (espacio) => espacio.complejo === filtros.complejo
+      (espacio) =>
+        espacio.complejo
+          .toLowerCase()
+          .includes(filtros.complejo!.toLowerCase())
     );
   }
 
@@ -135,7 +56,106 @@ export async function listarEspacios(
     );
   }
 
-  return listaMock(datos, filtros.pagina, filtros.porPagina);
+  return datos;
+}
+
+function paginarEspacios(
+  datos: Espacio[],
+  filtros: FiltrosEspacios
+): RespuestaLista<Espacio> {
+  const pagina = Math.max(1, filtros.pagina ?? 1);
+  const porPagina = Math.max(1, filtros.porPagina ?? 10);
+  const inicio = (pagina - 1) * porPagina;
+
+  return {
+    datos: datos.slice(inicio, inicio + porPagina),
+    meta: {
+      total: datos.length,
+      pagina,
+      porPagina,
+    },
+  };
+}
+
+async function obtenerCatalogoEspacios(): Promise<Espacio[]> {
+  const respuesta = await getLista<Espacio>("/espacios", {
+    pagina: 1,
+    porPagina: CANTIDAD_MAXIMA_CATALOGO,
+  });
+
+  await guardarCatalogo("espacios", respuesta.datos);
+
+  return respuesta.datos;
+}
+
+async function obtenerEspaciosGuardados(): Promise<Espacio[] | null> {
+  return obtenerCatalogo<Espacio[]>("espacios");
+}
+
+async function preciosApiPorEspacio(): Promise<Map<string, number>> {
+  try {
+    const { datos } = await getLista<Espacio>("/espacios", {
+      pagina: 1,
+      porPagina: CANTIDAD_MAXIMA_CATALOGO,
+    });
+
+    return new Map(
+      datos.map((espacio) => [espacio.id, espacio.precioPorHora])
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+export async function listarEspacios(
+  filtros: FiltrosEspacios = {}
+): Promise<RespuestaLista<Espacio>> {
+  if (USAR_MOCKS) {
+    let datos = espaciosMock.filter((espacio) => espacio.activo);
+
+    if (!(await estaSinConexion())) {
+      const preciosApi = await preciosApiPorEspacio();
+
+      datos = datos.map((espacio) => {
+        const idApi = obtenerIdEspacioApi(espacio.id);
+        const precioApi = idApi ? preciosApi.get(idApi) : undefined;
+
+        return precioApi === undefined
+          ? espacio
+          : { ...espacio, precioPorHora: precioApi };
+      });
+    }
+
+    return paginarEspacios(filtrarEspacios(datos, filtros), filtros);
+  }
+
+  let espacios: Espacio[] | null = null;
+
+  if (await estaSinConexion()) {
+    espacios = await obtenerEspaciosGuardados();
+  } else {
+    try {
+      espacios = await obtenerCatalogoEspacios();
+    } catch (error) {
+      if (
+        error instanceof ErrorServicio &&
+        error.codigo === "ERROR_RED"
+      ) {
+        espacios = await obtenerEspaciosGuardados();
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  if (!espacios) {
+    throw new ErrorServicio(
+      "ERROR_RED",
+      "No hay conexión y todavía no se guardó el catálogo de espacios en este dispositivo."
+    );
+  }
+
+  return paginarEspacios(filtrarEspacios(espacios, filtros), filtros);
 }
 
 export async function getEspacioById(
@@ -148,7 +168,10 @@ export async function getEspacioById(
     if (!espacio) return respuestaMock(null);
 
     const idApi = obtenerIdEspacioApi(id);
-    if (!idApi) return respuestaMock(espacio);
+
+    if (!idApi || (await estaSinConexion())) {
+      return respuestaMock(espacio);
+    }
 
     try {
       const espacioApi = await getUno<Espacio>(`/espacios/${idApi}`);
@@ -162,14 +185,58 @@ export async function getEspacioById(
     }
   }
 
+  if (await estaSinConexion()) {
+    const espacios = await obtenerEspaciosGuardados();
+
+    if (!espacios) {
+      throw new ErrorServicio(
+        "ERROR_RED",
+        "No hay conexión y todavía no se guardó este espacio en el dispositivo."
+      );
+    }
+
+    return espacios.find((espacio) => espacio.id === id) ?? null;
+  }
+
   try {
-    return await getUno<Espacio>(`/espacios/${id}`);
+    const espacio = await getUno<Espacio>(`/espacios/${id}`);
+
+    // Actualizamos también el espacio individual dentro del catálogo local.
+    try {
+      const espacios = (await obtenerEspaciosGuardados()) ?? [];
+      const indice = espacios.findIndex((item) => item.id === id);
+
+      if (indice >= 0) {
+        espacios[indice] = espacio;
+      } else {
+        espacios.push(espacio);
+      }
+
+      await guardarCatalogo("espacios", espacios);
+    } catch (error) {
+      if (__DEV__) {
+        console.warn("No se pudo actualizar el espacio en caché:", error);
+      }
+    }
+
+    return espacio;
   } catch (error) {
     if (
       error instanceof ErrorServicio &&
       error.codigo === "ESPACIO_NO_ENCONTRADO"
     ) {
       return null;
+    }
+
+    if (
+      error instanceof ErrorServicio &&
+      error.codigo === "ERROR_RED"
+    ) {
+      const espacios = await obtenerEspaciosGuardados();
+
+      if (espacios) {
+        return espacios.find((espacio) => espacio.id === id) ?? null;
+      }
     }
 
     throw error;
