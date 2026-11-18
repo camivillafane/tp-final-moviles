@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
@@ -13,11 +13,20 @@ import {
 } from "@/servicios/notificacionesLocales";
 import * as Notifications from "expo-notifications";
 
+const CASOS_SIMULADOS = [
+  { id: "bloqueo", etiqueta: "Bloqueo por lluvia o mantenimiento", titulo: "Turno suspendido", cuerpo: "Cancha de prueba: el turno se suspendió por lluvia o mantenimiento." },
+  { id: "cambio-reserva", etiqueta: "Cambio de reserva", titulo: "Tu reserva fue modificada", cuerpo: "Cancha de prueba: el horario de tu reserva cambió. Revisá los detalles." },
+  { id: "favorito-disponible", etiqueta: "Espacio favorito disponible", titulo: "Un favorito está disponible", cuerpo: "Cancha de prueba: hay un horario disponible en tu espacio favorito." },
+];
+
 export default function PruebaNotificacionesPantalla() {
   const router = useRouter();
   const [permiso, setPermiso] = useState("Consultando permiso...");
   const [identificadorPendiente, setIdentificadorPendiente] = useState<string | null>(null);
   const [reservaPruebaId, setReservaPruebaId] = useState<string | null>(null);
+  const [simulacionesPendientes, setSimulacionesPendientes] = useState<
+    { identificador: string; casoId: string; etiqueta: string }[]
+  >([]);
   const [ocupado, setOcupado] = useState(false);
   const [mensaje, setMensaje] = useState("Todavía no se programó una notificación.");
 
@@ -34,6 +43,14 @@ export default function PruebaNotificacionesPantalla() {
       if (notificacion.request.content.data?.tipo === "recordatorio-reserva") {
         setMensaje("Llegó el recordatorio de reserva de prueba.");
         setReservaPruebaId(null);
+      }
+      if (notificacion.request.content.data?.origen === "simulacion-caso") {
+        const casoId = notificacion.request.content.data?.casoId;
+        const caso = CASOS_SIMULADOS.find((item) => item.id === casoId);
+        setMensaje(`Lleg\u00f3 la simulaci\u00f3n: ${caso?.etiqueta ?? "caso local"}.`);
+        setSimulacionesPendientes((pendientes) =>
+          pendientes.filter((item) => item.casoId !== casoId)
+        );
       }
     });
 
@@ -138,10 +155,60 @@ export default function PruebaNotificacionesPantalla() {
     }
   };
 
+  const programarSimulacion = async (casoId: string) => {
+    const caso = CASOS_SIMULADOS.find((item) => item.id === casoId);
+    if (!caso) return;
+
+    setOcupado(true);
+    try {
+      const previa = simulacionesPendientes.find((item) => item.casoId === casoId);
+      if (previa) await cancelarNotificacionLocal(previa.identificador);
+      const identificador = await programarNotificacionLocal({
+        titulo: caso.titulo,
+        cuerpo: caso.cuerpo,
+        // Solo se evalúa al tocar el botón; la fecha de prueba es deliberadamente relativa al momento actual.
+        // eslint-disable-next-line react-hooks/purity
+        fecha: new Date(Date.now() + 10_000),
+        datos: { origen: "simulacion-caso", casoId },
+      });
+      if (!identificador) {
+        setPermiso("Denegado");
+        setMensaje("No se program\u00f3: revis\u00e1 el permiso de notificaciones.");
+        return;
+      }
+
+      setPermiso("Concedido");
+      setSimulacionesPendientes((pendientes) => [
+        ...pendientes.filter((item) => item.casoId !== casoId),
+        { identificador, casoId, etiqueta: caso.etiqueta },
+      ]);
+      setMensaje(`Simulaci\u00f3n programada para dentro de 10 segundos: ${caso.etiqueta}.`);
+    } catch (error) {
+      setMensaje(error instanceof Error ? error.message : "No se pudo programar la simulaci\u00f3n.");
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const cancelarSimulaciones = async () => {
+    setOcupado(true);
+    try {
+      await Promise.all(
+        simulacionesPendientes.map((item) => cancelarNotificacionLocal(item.identificador))
+      );
+      setSimulacionesPendientes([]);
+      setMensaje("Se cancelaron las simulaciones pendientes.");
+    } catch (error) {
+      setMensaje(error instanceof Error ? error.message : "No se pudieron cancelar las simulaciones.");
+    } finally {
+      setOcupado(false);
+    }
+  };
+
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
-      <View style={estilos.contenido}>
+      <ScrollView contentContainerStyle={estilos.contenido}>
         <Text style={estilos.titulo}>Prueba de notificaciones locales</Text>
         <Text style={estilos.descripcion}>
           Esta pantalla de desarrollo programa un aviso de prueba para 10 segundos después. No crea ni modifica reservas.
@@ -160,6 +227,33 @@ export default function PruebaNotificacionesPantalla() {
           <Pressable style={estilos.botonPrincipal} onPress={() => void programarRecordatorioPrueba()} disabled={ocupado}>
             <Text style={estilos.textoBotonPrincipal}>{ocupado ? "Un momento..." : "Probar recordatorio de reserva (10 s)"}</Text>
           </Pressable>
+          <Text style={estilos.etiqueta}>Simulaciones locales (no cambian reservas ni consultan la API)</Text>
+          {CASOS_SIMULADOS.map((caso) => (
+            <Pressable
+              key={caso.id}
+              style={estilos.botonSecundario}
+              onPress={() => void programarSimulacion(caso.id)}
+              disabled={ocupado}
+            >
+              <Text style={estilos.textoBotonSecundario}>
+                {ocupado ? "Un momento..." : caso.etiqueta}
+              </Text>
+            </Pressable>
+          ))}
+          {simulacionesPendientes.length > 0 && (
+            <>
+              <Text style={estilos.mensaje}>
+                Pendientes: {simulacionesPendientes.map((item) => item.etiqueta).join(", ")}
+              </Text>
+              <Pressable
+                style={estilos.botonCancelar}
+                onPress={() => void cancelarSimulaciones()}
+                disabled={ocupado}
+              >
+                <Text style={estilos.textoCancelar}>Cancelar simulaciones pendientes</Text>
+              </Pressable>
+            </>
+          )}
           <Pressable
             style={[estilos.botonCancelar, (!reservaPruebaId || ocupado) && estilos.botonDeshabilitado]}
             onPress={() => void cancelarRecordatorioPrueba()}
@@ -179,14 +273,14 @@ export default function PruebaNotificacionesPantalla() {
         <Text style={estilos.ayuda}>
           Para probar en segundo plano, programá el aviso y minimizá Expo Go antes de que pasen los 10 segundos.
         </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
   contenedor: { flex: 1, backgroundColor: colores.fondo },
-  contenido: { flex: 1, gap: 16, padding: 20 },
+  contenido: { flexGrow: 1, gap: 16, padding: 20 },
   titulo: { color: colores.textoOscuro, fontSize: 22, fontWeight: "700" },
   descripcion: { color: colores.verdeGrisaceo, fontSize: 15, lineHeight: 22 },
   tarjeta: { backgroundColor: colores.blanco, borderRadius: 14, gap: 14, padding: 16 },
