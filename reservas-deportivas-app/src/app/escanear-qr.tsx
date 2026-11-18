@@ -11,6 +11,8 @@ import { obtenerReservaPorQrToken, obtenerNombreUsuario } from "@/servicios/dbSe
 import { listarEspacios } from "@/servicios/espacios";
 import type { Espacio } from "@/tipos/espacio";
 import { registrarIngreso } from "@/servicios/ingresos";
+import * as Haptics from "expo-haptics";
+
 
 export default function EscanearQrPantalla() {
 const router = useRouter();
@@ -161,6 +163,23 @@ if (!permiso.granted) {
                             return;
                             }
 
+                            if (reserva.espacioId !== espacioSeleccionado){
+                                await vibrarResultadoQr(false);
+                                setResultado ("Esta reserva no corresponde al espacio seleccionado.");
+                                return;
+                            }
+
+                            
+                            // if (!ingresoRegistrado){
+                            //     await vibrarResultadoQr(false);
+                            //     setResultado ("Esta reserva ya tiene un ingreso registrado.");
+                            //     return;
+                            // }
+
+                            await vibrarResultadoQr(true);
+                            setResultado("Ingreso autorizado.")
+
+
                             // Obtener la fecha actual del celular
                             const ahora = new Date();
                             const anio = ahora.getFullYear();
@@ -256,6 +275,18 @@ if (!permiso.granted) {
         </ScrollView>
     </SafeAreaView>
     );
+}
+
+async function vibrarResultadoQr(valido: boolean) {
+    try{ 
+        await Haptics.notificationAsync(
+            valido 
+            ? Haptics.NotificationFeedbackType.Success
+            : Haptics.NotificationFeedbackType.Error
+        );
+    } catch {
+
+    }
 }
 
 const estilos = StyleSheet.create({
