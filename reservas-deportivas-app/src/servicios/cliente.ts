@@ -33,15 +33,7 @@ function traducir(error: unknown): ErrorServicio {
   if (error instanceof ErrorServicio) return error;
 
   if (axios.isAxiosError(error)) {
-    if (!error.response && __DEV__) {
-      console.error("Error de red al llamar a la API:", {
-        codigo: error.code,
-        mensaje: error.message,
-        baseURL: error.config?.baseURL,
-        ruta: error.config?.url,
-      });
-    }
-
+    
     const cuerpo = error.response?.data;
 
     if (cuerpo && typeof cuerpo === "object" && "error" in cuerpo) {

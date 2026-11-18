@@ -22,7 +22,6 @@ import type { Espacio } from "@/tipos/espacio";
 import { useSesion } from "@/contextos/Sesion";
 import { EstadoConexion } from "@/componentes/EstadoConexion";
 
-
 export default function MisReservasPantalla() {
   const router = useRouter();
   const { usuario } = useSesion();
@@ -44,16 +43,19 @@ export default function MisReservasPantalla() {
 
     if (!usuarioId) {
       setReservas([]);
+      setEspacios([]);
       return;
     }
-
-    const [data, espaciosRespuesta] = await Promise.all([
-      listarMisReservas(usuarioId),
-      listarEspacios({ porPagina: 100 }).catch(() => null),
-    ]);
+    const data = await listarMisReservas(usuarioId);
     setReservas(data);
+
+    const espaciosRespuesta = await listarEspacios({
+      porPagina: 100,
+    }).catch(() => null);
+
     setEspacios(espaciosRespuesta?.datos ?? []);
-  } catch (error) {
+
+      } catch (error) {
     console.error("Error al cargar reservas:", error);
     Alert.alert("Error", "No se pudieron cargar tus reservas.");
   } finally {

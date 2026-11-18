@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { FavoritosProvider } from "@/contextos/Favoritos";
@@ -24,19 +24,11 @@ function Navegacion() {
 }
 
 export default function RootLayout() {
-  const [dbLista, setDbLista] = useState(false);
-
   useEffect(() => {
-    inicializarBaseDeDatos()
-      .then(() => setDbLista(true))
-      .catch((error) =>
-        console.error("Error al inicializar SQLite:", error)
-      );
+    inicializarBaseDeDatos().catch((error) => {
+      console.error("Error al inicializar SQLite:", error);
+    });
   }, []);
-
-  if (!dbLista) {
-    return null;
-  }
 
   return (
     <TemaProvider>

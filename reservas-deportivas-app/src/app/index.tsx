@@ -61,7 +61,11 @@ export default function Home() {
       setEstado("success");
     } catch (e) {
       console.error("Error al cargar espacios:", e);
-      setError(e instanceof Error ? e.message : "No se pudieron cargar los espacios. Intentá de nuevo.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "No se pudieron cargar los espacios. Intentá de nuevo."
+      );
       setEstado("error");
     }
   }, []);
@@ -85,9 +89,15 @@ export default function Home() {
     try {
       const { datos } = await listarEspacios();
       setEspacios(datos);
+      setEstado("success");
+      setError(null);
     } catch (e) {
       console.error("Error al refrescar espacios:", e);
-      setError(e instanceof Error ? e.message : "No se pudieron cargar los espacios. Intentalo nuevamente.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "No se pudieron cargar los espacios. Intentá nuevamente."
+      );
       setEstado("error");
     } finally {
       setRefrescando(false);
@@ -126,109 +136,126 @@ export default function Home() {
     });
   }, [espacios, deporteSeleccionado, complejoSeleccionado, busqueda]);
 
-  if (estado === "loading") {
-    return <EstadoCarga mensaje="Cargando espacios..." />;
-  }
-
-  if (estado === "error") {
-    return <EstadoError mensaje={error ?? "Ocurrió un error"} onReintentar={cargarEspacios} />;
-  }
-
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top"]}>
-      <HeaderInstitucional onPerfilPress={() => setMenuPerfilVisible(true)} />
+      <HeaderInstitucional
+        onPerfilPress={() => setMenuPerfilVisible(true)}
+      />
 
-      <ScrollView
-        style={estilos.scroll}
-        contentContainerStyle={estilos.contenidoScroll}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refrescando}
-            onRefresh={refrescar}
-            tintColor={paleta.verdePrincipal}
-            colors={[paleta.verdePrincipal]}
-            progressBackgroundColor={paleta.superficie}
-            />
-        }
-      >
-        <Buscador valor={busqueda} onChangeText={setBusqueda} />
-
-        <Text style={estilos.tituloSeccion}>Filtrar por deporte</Text>
+      {estado === "loading" && espacios.length === 0 ? (
+        <EstadoCarga mensaje="Cargando espacios..." />
+      ) : estado === "error" && espacios.length === 0 ? (
+        <EstadoError
+          mensaje={error ?? "Ocurrió un error"}
+          onReintentar={cargarEspacios}
+        />
+      ) : (
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={estilos.chips}
+          style={estilos.scroll}
+          contentContainerStyle={estilos.contenidoScroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refrescando}
+              onRefresh={refrescar}
+              tintColor={paleta.verdePrincipal}
+              colors={[paleta.verdePrincipal]}
+              progressBackgroundColor={paleta.superficie}
+            />
+          }
         >
-          <ChipDisciplina
-            deporte={{ id: "todos", nombre: "Todos", icono: "apps-outline", color: paleta.verdeBoton }}
-            seleccionado={deporteSeleccionado === null}
-            onPress={() => setDeporteSeleccionado(null)}
-          />
-          {deportesVisibles.map((deporte) => (
+          {estado === "error" && (
+            <EstadoError
+              mensaje={error ?? "Ocurrió un error"}
+              onReintentar={cargarEspacios}
+            />
+          )}
+
+          <Buscador valor={busqueda} onChangeText={setBusqueda} />
+
+          <Text style={estilos.tituloSeccion}>Filtrar por deporte</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={estilos.chips}
+          >
             <ChipDisciplina
-              key={deporte.id}
-              deporte={deporte}
-              seleccionado={deporteSeleccionado === deporte.id}
-              onPress={() => setDeporteSeleccionado(deporte.id)}
+              deporte={{
+                id: "todos",
+                nombre: "Todos",
+                icono: "apps-outline",
+                color: paleta.verdeBoton,
+              }}
+              seleccionado={deporteSeleccionado === null}
+              onPress={() => setDeporteSeleccionado(null)}
             />
-          ))}
-        </ScrollView>
+            {deportesVisibles.map((deporte) => (
+              <ChipDisciplina
+                key={deporte.id}
+                deporte={deporte}
+                seleccionado={deporteSeleccionado === deporte.id}
+                onPress={() => setDeporteSeleccionado(deporte.id)}
+              />
+            ))}
+          </ScrollView>
 
-        <Text style={estilos.tituloSeccion}>Filtrar por complejo</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={estilos.chips}
-        >
-          <ChipFiltro
-            etiqueta="Todos"
-            seleccionado={complejoSeleccionado === null}
-            onPress={() => setComplejoSeleccionado(null)}
-          />
-          {complejos.map((complejo) => (
+          <Text style={estilos.tituloSeccion}>Filtrar por complejo</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={estilos.chips}
+          >
             <ChipFiltro
-              key={complejo}
-              etiqueta={complejo}
-              seleccionado={complejoSeleccionado === complejo}
-              onPress={() => setComplejoSeleccionado(complejo)}
+              etiqueta="Todos"
+              seleccionado={complejoSeleccionado === null}
+              onPress={() => setComplejoSeleccionado(null)}
             />
-          ))}
+            {complejos.map((complejo) => (
+              <ChipFiltro
+                key={complejo}
+                etiqueta={complejo}
+                seleccionado={complejoSeleccionado === complejo}
+                onPress={() => setComplejoSeleccionado(complejo)}
+              />
+            ))}
+          </ScrollView>
+
+          <Pressable
+            style={estilos.bloqueMapa}
+            onPress={() => router.push("/mapa")}
+          >
+            <Text style={estilos.tituloMapa}>Ver todos en el mapa</Text>
+            <Text style={estilos.subtituloMapa}>
+              Encontrá los espacios deportivos de Villaguay
+            </Text>
+          </Pressable>
+
+          <Text style={estilos.tituloSeccion}>Espacios disponibles</Text>
+
+          {espaciosFiltrados.length === 0 ? (
+            <EstadoVacio mensaje="No se encontraron espacios con ese filtro." />
+          ) : (
+            espaciosFiltrados.map((espacio) => (
+              <CardEspacio
+                key={espacio.id}
+                espacio={espacio}
+                onVerDetalle={() =>
+                  router.push({
+                    pathname: "/espacio/[id]",
+                    params: { id: espacio.id },
+                  })
+                }
+              />
+            ))
+          )}
         </ScrollView>
-
-        <Pressable
-          style={estilos.bloqueMapa}
-          onPress={() => router.push("/mapa")}
-        >
-          <Text style={estilos.tituloMapa}>Ver todos en el mapa</Text>
-          <Text style={estilos.subtituloMapa}>Encontrá los espacios deportivos de Villaguay</Text>
-        </Pressable>
-
-        <Text style={estilos.tituloSeccion}>Espacios disponibles</Text>
-
-        {espaciosFiltrados.length === 0 ? (
-          <EstadoVacio mensaje="No se encontraron espacios con ese filtro." />
-        ) : (
-          espaciosFiltrados.map((espacio) => (
-            <CardEspacio
-              key={espacio.id}
-              espacio={espacio}
-              onVerDetalle={() =>
-                router.push({
-                  pathname: "/espacio/[id]",
-                  params: { id: espacio.id },
-                })
-              }
-            />
-          ))
-        )}
-      </ScrollView>
+      )}
 
       <MenuPerfil
         visible={menuPerfilVisible}
         usuario={usuario}
         onCerrar={() => setMenuPerfilVisible(false)}
-        onCerrarSesion={async() => {
+        onCerrarSesion={async () => {
           await cerrarSesion();
           setMenuPerfilVisible(false);
         }}

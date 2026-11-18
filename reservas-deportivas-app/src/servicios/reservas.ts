@@ -19,6 +19,7 @@ import {
   obtenerTodasLasReservasLocales,
   cancelarReservaLocal,
 } from "@/servicios/dbServicios";
+import { estaSinConexion } from "@/servicios/conexion";
 
 interface ReservaApi {
   id: string;
@@ -31,7 +32,6 @@ interface ReservaApi {
   ingresoEn: string | null;
   creadaEn: string;
   cancelableHasta: string;
-  // Datos locales opcionales, presentes solo si alguna versión de la API los envía.
   fecha?: string;
   inicio?: string;
   fin?: string;
@@ -327,49 +327,82 @@ if (cantidadReservasActivas >= 3) {
 
 export async function listarMisReservas(usuarioId: string): Promise<Reserva[]> {
   if (!usuarioId) return [];
-  if (USAR_MOCKS) return obtenerReservasLocales(usuarioId);
+
+  if (USAR_MOCKS) {
+    return obtenerReservasLocales(usuarioId);
+  }
+
+  if (await estaSinConexion()) {
+    return obtenerReservasLocales(usuarioId);
+  }
 
   try {
     const [proximas, pasadas, espaciosRespuesta] = await Promise.all([
-      getLista<ReservaApi>("/yo/reservas", { cuando: "proximas", pagina: 1, porPagina: 100 }),
-      getLista<ReservaApi>("/yo/reservas", { cuando: "pasadas", pagina: 1, porPagina: 100 }),
-      getLista<Espacio>("/espacios", { pagina: 1, porPagina: 100 }).catch(() => null),
+      getLista<ReservaApi>("/yo/reservas", {
+        cuando: "proximas",
+        pagina: 1,
+        porPagina: 100,
+      }),
+      getLista<ReservaApi>("/yo/reservas", {
+        cuando: "pasadas",
+        pagina: 1,
+        porPagina: 100,
+      }),
+      getLista<Espacio>("/espacios", {
+        pagina: 1,
+        porPagina: 100,
+      }).catch(() => null),
     ]);
+
     const preciosPorEspacio = new Map(
-      (espaciosRespuesta?.datos ?? []).map((espacio) => [espacio.id, espacio.precioPorHora])
+      (espaciosRespuesta?.datos ?? []).map((espacio) => [
+        espacio.id,
+        espacio.precioPorHora,
+      ])
     );
+
     const reservasLocales = await obtenerReservasLocales(usuarioId);
+
     const reservasLocalesPorId = new Map(
       reservasLocales.map((reserva) => [reserva.id, reserva])
     );
-    const reservas = await Promise.all(
-      [...proximas.datos, ...pasadas.datos].map((reserva) =>
-        (() => {
-          const local = reservasLocalesPorId.get(reserva.id);
-          const precioLocal = local?.precioPorHora;
-          return normalizarReservaApi(reserva, {
-            usuarioId: reserva.usuarioId || usuarioId,
-            turnoId: reserva.turnoId,
-            espacioId: reserva.espacioId ?? local?.espacioId,
-            fecha: reserva.fecha ?? local?.fecha,
-            inicio: reserva.inicio ?? local?.inicio,
-            fin: reserva.fin ?? local?.fin,
-            cantidadPersonas: reserva.cantidadPersonas,
-            precioPorHora:
-              reserva.precioPorHora ??
-              (precioLocal && precioLocal > 0
-                ? precioLocal
-                : preciosPorEspacio.get(reserva.espacioId)),
-          }, local);
-        })()
-      )
-    );
-    await Promise.all(reservas.map((reserva) => guardarReservaLocal(reserva)));
 
-    const idsDevueltosPorApi = new Set(reservas.map((reserva) => reserva.id));
+    const reservas = [...proximas.datos, ...pasadas.datos].map((reserva) => {
+      const local = reservasLocalesPorId.get(reserva.id);
+      const precioLocal = local?.precioPorHora;
+
+      return normalizarReservaApi(
+        reserva,
+        {
+          usuarioId: reserva.usuarioId || usuarioId,
+          turnoId: reserva.turnoId,
+          espacioId: reserva.espacioId ?? local?.espacioId,
+          fecha: reserva.fecha ?? local?.fecha,
+          inicio: reserva.inicio ?? local?.inicio,
+          fin: reserva.fin ?? local?.fin,
+          cantidadPersonas: reserva.cantidadPersonas,
+          precioPorHora:
+            reserva.precioPorHora ??
+            (precioLocal && precioLocal > 0
+              ? precioLocal
+              : preciosPorEspacio.get(reserva.espacioId)),
+        },
+        local
+      );
+    });
+
+    await Promise.all(
+      reservas.map((reserva) => guardarReservaLocal(reserva))
+    );
+
+    const idsDevueltosPorApi = new Set(
+      reservas.map((reserva) => reserva.id)
+    );
+
     const confirmadasLocalesPendientes = reservasLocales.filter(
       (reserva) =>
-        reserva.estado === "confirmada" && !idsDevueltosPorApi.has(reserva.id)
+        reserva.estado === "confirmada" &&
+        !idsDevueltosPorApi.has(reserva.id)
     );
 
     return [...reservas, ...confirmadasLocalesPendientes];
@@ -377,6 +410,7 @@ export async function listarMisReservas(usuarioId: string): Promise<Reserva[]> {
     if (error instanceof ErrorServicio && error.codigo === "ERROR_RED") {
       return obtenerReservasLocales(usuarioId);
     }
+
     throw error;
   }
 }
@@ -385,32 +419,62 @@ export async function obtenerDetalleReserva(
   reservaId: string,
   usuarioId: string
 ): Promise<Reserva | null> {
-  if (USAR_MOCKS) return obtenerReservaLocal(reservaId, usuarioId);
+  if (!reservaId || !usuarioId) return null;
+
+  const reservaAnterior = await obtenerReservaLocal(
+    reservaId,
+    usuarioId
+  );
+
+  if (USAR_MOCKS) {
+    return reservaAnterior;
+  }
+
+  if (await estaSinConexion()) {
+    return reservaAnterior;
+  }
 
   try {
-    const reservaAnterior = await obtenerReservaLocal(reservaId, usuarioId);
-    const datos = await getUno<ReservaApi>(`/reservas/${encodeURIComponent(reservaId)}`);
+    const datos = await getUno<ReservaApi>(
+      `/reservas/${encodeURIComponent(reservaId)}`
+    );
+
     const precioEspacio =
-      reservaAnterior?.precioPorHora && reservaAnterior.precioPorHora > 0
+      reservaAnterior?.precioPorHora &&
+      reservaAnterior.precioPorHora > 0
         ? reservaAnterior.precioPorHora
-        : (await getUno<Espacio>(`/espacios/${datos.espacioId}`).catch(() => null))
-            ?.precioPorHora;
-    const reserva = await normalizarReservaApi(datos, {
-      usuarioId,
-      turnoId: datos.turnoId,
-      espacioId: reservaAnterior?.espacioId ?? datos.espacioId,
-      fecha: reservaAnterior?.fecha || datos.fecha,
-      inicio: reservaAnterior?.inicio || datos.inicio,
-      fin: reservaAnterior?.fin || datos.fin,
-      cantidadPersonas: datos.cantidadPersonas,
-      precioPorHora: datos.precioPorHora ?? precioEspacio,
-    }, reservaAnterior ?? undefined);
+        : (
+            await getUno<Espacio>(
+              `/espacios/${datos.espacioId}`
+            ).catch(() => null)
+          )?.precioPorHora;
+
+    const reserva = normalizarReservaApi(
+      datos,
+      {
+        usuarioId,
+        turnoId: datos.turnoId,
+        espacioId: reservaAnterior?.espacioId ?? datos.espacioId,
+        fecha: reservaAnterior?.fecha || datos.fecha,
+        inicio: reservaAnterior?.inicio || datos.inicio,
+        fin: reservaAnterior?.fin || datos.fin,
+        cantidadPersonas: datos.cantidadPersonas,
+        precioPorHora: datos.precioPorHora ?? precioEspacio,
+      },
+      reservaAnterior ?? undefined
+    );
+
     await guardarReservaLocal(reserva);
+
     return reserva;
   } catch (error) {
-    if (error instanceof ErrorServicio && error.codigo === "ERROR_RED") {
-      return obtenerReservaLocal(reservaId, usuarioId);
+    if (
+      error instanceof ErrorServicio &&
+      error.codigo === "ERROR_RED"
+    ) {
+      return reservaAnterior;
     }
+
     throw error;
   }
 }

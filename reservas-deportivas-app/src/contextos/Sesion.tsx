@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useEffect,
   useState,
   type ReactNode,
@@ -31,6 +32,7 @@ interface SesionContexto {
   iniciarSesion: (email: string, clave: string) => Promise<void>;
   registrarUsuario: (datos: DatosRegistro) => Promise<void>;
   iniciarSesionConUsuario: (usuario: Usuario) => Promise<void>;
+  actualizarUsuario: () => Promise<void>;
   cerrarSesion: () => Promise<void>;
 }
 
@@ -102,6 +104,16 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const actualizarUsuario = useCallback(async () => {
+    const token = await recuperarToken();
+    if (!token) throw new Error("La sesión ya no está activa.");
+
+    const usuarioActualizado = await getUno<Usuario>("/yo");
+    await guardarSesion(usuarioActualizado);
+    await actualizarCredencialesBiometricas(token, usuarioActualizado);
+    setUsuario(usuarioActualizado);
+  }, []);
+
   const cerrarSesion = async () => {
     await eliminarSesion();
     await eliminarToken();
@@ -116,6 +128,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
         iniciarSesion,
         registrarUsuario,
         iniciarSesionConUsuario,
+        actualizarUsuario,
         cerrarSesion,
       }}
     >
