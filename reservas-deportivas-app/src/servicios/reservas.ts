@@ -47,6 +47,7 @@ type ContextoReserva = Pick<Reserva, "usuarioId"> &
       | "fin"
       | "cantidadPersonas"
       | "precioPorHora"
+      | "cancelableHasta"
     >
   > & { turnoId?: string };
 
@@ -106,6 +107,7 @@ function normalizarReservaApi(
       datos.estado === "cancelada"
         ? anterior?.canceladaEn ?? new Date().toISOString()
         : null,
+    cancelableHasta: datos.cancelableHasta || anterior?.cancelableHasta || null,
   };
 }
 
@@ -299,6 +301,9 @@ if (cantidadReservasActivas >= 3) {
     qrToken: generarQrToken(),
     creadaEn: new Date().toISOString(),
     canceladaEn: null,
+    cancelableHasta: new Date(
+      new Date(`${solicitud.fecha}T${solicitud.inicio}:00`).getTime() - 4 * 60 * 60 * 1000
+    ).toISOString(),
   };
 
 
@@ -413,8 +418,15 @@ export async function cancelarReserva(
   reservaId: string,
   usuarioId: string
 ): Promise<Reserva> {
+  const reservaAnterior = await obtenerReservaLocal(reservaId, usuarioId);
+  if (reservaAnterior?.cancelableHasta) {
+    const limite = Date.parse(reservaAnterior.cancelableHasta);
+    if (Number.isFinite(limite) && Date.now() > limite) {
+      throw new Error("Ya pasó el plazo para cancelar online. Avisale al encargado del espacio para registrar la cancelación tardía.");
+    }
+  }
+
   if (!USAR_MOCKS) {
-    const reservaAnterior = await obtenerReservaLocal(reservaId, usuarioId).catch(() => null);
     const datos = await post<ReservaApi>(
       `/reservas/${encodeURIComponent(reservaId)}/cancelacion`
     );

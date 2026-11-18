@@ -92,6 +92,11 @@ export default function DetalleReservaPantalla() {
                 Espacio: {espacio?.nombre ?? reserva.espacioId}
             </Text>
             <Text style={estilos.dato}>Fecha: {reserva.fecha}</Text>
+            {reserva.cancelableHasta && reserva.estado === "confirmada" && (
+              <Text style={estilos.dato}>
+                Podés cancelar online hasta: {new Date(reserva.cancelableHasta).toLocaleString("es-AR")}
+              </Text>
+            )}
             <Text style={estilos.dato}>
               Horario: {reserva.inicio} a {reserva.fin} hs
             </Text>

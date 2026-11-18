@@ -17,6 +17,7 @@ export const reservasEjemplo: Reserva[] = [
     qrToken: "token-demo-res-001",
     creadaEn: "2026-11-09T19:00:00",
     canceladaEn: null,
+    cancelableHasta: "2026-11-10T06:00:00-03:00",
 },
 {
     id: "res-002",
@@ -32,6 +33,7 @@ export const reservasEjemplo: Reserva[] = [
     qrToken: "token-demo-res-002",
     creadaEn: "2026-11-10T10:00:00",
     canceladaEn: null,
+    cancelableHasta: "2026-11-12T12:00:00-03:00",
 },
 
 ];
@@ -48,4 +50,4 @@ export const obtenerMisReservas = (): Reserva[] => {
   );
 };
 
-console.log("Mis reservas:", obtenerMisReservas()); 
+console.log("Mis reservas:", obtenerMisReservas());
