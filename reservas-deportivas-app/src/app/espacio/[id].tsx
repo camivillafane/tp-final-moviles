@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
@@ -8,36 +9,43 @@ import {
   StyleSheet,
   Text,
   View,
-  Pressable
+  Pressable,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Espacio } from "@/tipos/espacio";
+import { Deporte } from "@/tipos/deporte";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
 import { EstadoError } from "@/componentes/EstadoError";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { BotonCta } from "@/componentes/BotonCta";
+import { VideoEspacio } from "@/componentes/VideoEspacio";
+
 import { usePaleta } from "@/contextos/Tema";
 import type { Paleta } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
 import { listarDeportes } from "@/servicios/deportes";
-import { VideoEspacio } from "@/componentes/VideoEspacio";
-import IonIcons from "@react-native-vector-icons/ionicons";
 import { useFavoritos } from "@/contextos/Favoritos";
 import { useSesion } from "@/contextos/Sesion";
-import type { Deporte } from "@/tipos/deporte";
+
+import IonIcons from "@react-native-vector-icons/ionicons";
 
 export default function DetalleEspacio() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { esFavorito, cambiarFavorito }=useFavoritos();
+
+  const { esFavorito, cambiarFavorito } = useFavoritos();
   const { usuario } = useSesion();
+
   const paleta = usePaleta();
   const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
 
   const [espacio, setEspacio] = useState<Espacio | null>(null);
   const [deportes, setDeportes] = useState<Deporte[]>([]);
-  const [estado, setEstado] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [estado, setEstado] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   const [error, setError] = useState<string | null>(null);
 
   const cargarEspacio = async () => {
@@ -61,7 +69,7 @@ export default function DetalleEspacio() {
 
       setEspacio(datos);
       setEstado("success");
-    } catch (e) {
+    } catch {
       setError("No se pudo cargar el espacio. Intentá de nuevo.");
       setEstado("error");
     }
@@ -77,92 +85,139 @@ export default function DetalleEspacio() {
     cargarEspacio();
   }, [id]);
 
-  if (estado === "loading") {
-    return <EstadoCarga mensaje="Cargando espacio..." />;
-  }
+  const deporte = espacio
+    ? deportes.find((d) => d.id === espacio.deporteId)
+    : undefined;
 
-  if (estado === "error") {
-    return <EstadoError mensaje={error ?? "Ocurrió un error"} onReintentar={cargarEspacio} />;
-  }
-
-  if (!espacio) {
-    return <EstadoError mensaje="El espacio no existe." />;
-  }
-
-  const deporte= deportes.find((d) => d.id === espacio?.deporteId);
-  const favorito= esFavorito(espacio.id);
+  const favorito = espacio ? esFavorito(espacio.id) : false;
 
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
-      <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
-      <ScrollView style={estilos.scroll} showsVerticalScrollIndicator={false}>
-        <GaleriaEspacio imagenes={espacio.imagenes} />
+      <HeaderInstitucional
+        mostrarVolver
+        onVolverPress={() => router.back()}
+      />
 
-        <View style={estilos.contenido}>
-          <Text style={estilos.complejo}>{espacio.complejo}</Text>
-          <Text style={estilos.deporte}>{deporte?.nombre}</Text>
-          <View style={estilos.filaNombre}>
-          <Text style={estilos.nombre}>{espacio.nombre}</Text>
-          {usuario && (
-            <Pressable
-              style={estilos.botonFavorito}
-              onPress={() => cambiarFavorito(espacio.id)}
-              accessibilityRole="button"
-              accessibilityLabel={favorito ? "Quitar de favoritos" : "Agregar a favoritos"}
-            >
-              <IonIcons
-                name={favorito ? "heart" : "heart-outline"}
-                size={28}
-                color={paleta.magentaPrincipal}
-              />
-            </Pressable>
-          )}
-        </View>
+      {(estado === "idle" || estado === "loading") && (
+        <EstadoCarga mensaje="Cargando espacio..." />
+      )}
 
-          {!espacio.activo && (
-            <View style={estilos.badgeInactivo}>
-              <Text style={estilos.badgeTexto}>No disponible</Text>
+      {estado === "error" && (
+        <EstadoError
+          mensaje={error ?? "No se pudo cargar el espacio."}
+          onReintentar={cargarEspacio}
+        />
+      )}
+
+      {estado === "success" && espacio && (
+        <ScrollView
+          style={estilos.scroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <GaleriaEspacio imagenes={espacio.imagenes} />
+
+          <View style={estilos.contenido}>
+            <Text style={estilos.complejo}>{espacio.complejo}</Text>
+
+            <Text style={estilos.deporte}>{deporte?.nombre}</Text>
+
+            <View style={estilos.filaNombre}>
+              <Text style={estilos.nombre}>{espacio.nombre}</Text>
+
+              {usuario && (
+                <Pressable
+                  style={estilos.botonFavorito}
+                  onPress={() => cambiarFavorito(espacio.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    favorito ? "Quitar de favoritos" : "Agregar a favoritos"
+                  }
+                >
+                  <IonIcons
+                    name={favorito ? "heart" : "heart-outline"}
+                    size={28}
+                    color={paleta.magentaPrincipal}
+                  />
+                </Pressable>
+              )}
             </View>
-          )}
 
-          <View style={estilos.seccion}>
-            <Text style={estilos.tituloSeccion}>Video del espacio</Text>
-            <VideoEspacio url={espacio.videoUrl} />
-          </View>
+            {!espacio.activo && (
+              <View style={estilos.badgeInactivo}>
+                <Text style={estilos.badgeTexto}>No disponible</Text>
+              </View>
+            )}
 
-          <View style={estilos.seccion}>
-            <Text style={estilos.tituloSeccion}>Características</Text>
-            <FilaCaracteristica label="Superficie" valor={espacio.superficie} />
-            <FilaCaracteristica label="Techado" valor={espacio.techado ? "Sí" : "No"} />
-            <FilaCaracteristica label="Iluminación nocturna" valor={espacio.iluminacion ? "Sí" : "No"} />
-            <FilaCaracteristica label="Capacidad" valor={`${espacio.capacidad} personas`} />
-            <FilaCaracteristica
-              label="Precio por hora"
-              valor={
-                espacio.precioPorHora === 0
-                  ? "Gratis"
-                  : `$${espacio.precioPorHora.toLocaleString("es-AR")}`
-              }
-            />
-          </View>
+            <View style={estilos.seccion}>
+              <Text style={estilos.tituloSeccion}>Video del espacio</Text>
+              <VideoEspacio url={espacio.videoUrl} />
+            </View>
 
-          <View style={estilos.seccion}>
-            <Text style={estilos.tituloSeccion}>Reglas de uso</Text>
-            <Text style={estilos.reglas}>{espacio.reglas}</Text>
-          </View>
+            <View style={estilos.seccion}>
+              <Text style={estilos.tituloSeccion}>Características</Text>
 
-          <View style={estilos.seccion}>
-            <BotonCta
-              titulo="Ver disponibilidad"
-              deshabilitado={!espacio.activo}
-              onPress={() => router.push({ pathname: "/disponibilidad/[id]", params: { id: espacio.id } })}
-            />
-            <Pressable style={estilos.secundario} onPress={() => router.push({ pathname: "/mapa", params: { espacioId: espacio.id } })}>
-              <Text style={estilos.secundarioTexto}>Ver en el mapa</Text>
-            </Pressable>
+              <FilaCaracteristica
+                label="Superficie"
+                valor={espacio.superficie}
+              />
+
+              <FilaCaracteristica
+                label="Techado"
+                valor={espacio.techado ? "Sí" : "No"}
+              />
+
+              <FilaCaracteristica
+                label="Iluminación nocturna"
+                valor={espacio.iluminacion ? "Sí" : "No"}
+              />
+
+              <FilaCaracteristica
+                label="Capacidad"
+                valor={`${espacio.capacidad} personas`}
+              />
+
+              <FilaCaracteristica
+                label="Precio por hora"
+                valor={
+                  espacio.precioPorHora === 0
+                    ? "Gratis"
+                    : `$${espacio.precioPorHora.toLocaleString("es-AR")}`
+                }
+              />
+            </View>
+
+            <View style={estilos.seccion}>
+              <Text style={estilos.tituloSeccion}>Reglas de uso</Text>
+              <Text style={estilos.reglas}>{espacio.reglas}</Text>
+            </View>
+
+            <View style={estilos.seccion}>
+              <BotonCta
+                titulo="Ver disponibilidad"
+                deshabilitado={!espacio.activo}
+                onPress={() =>
+                  router.push({
+                    pathname: "/disponibilidad/[id]",
+                    params: { id: espacio.id },
+                  })
+                }
+              />
+
+              <Pressable
+                style={estilos.secundario}
+                onPress={() =>
+                  router.push({
+                    pathname: "/mapa",
+                    params: { espacioId: espacio.id },
+                  })
+                }
+              >
+                <Text style={estilos.secundarioTexto}>Ver en el mapa</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -174,6 +229,7 @@ interface GaleriaEspacioProps {
 function GaleriaEspacio({ imagenes }: GaleriaEspacioProps) {
   const paleta = usePaleta();
   const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   const [ancho, setAncho] = useState(0);
   const [indice, setIndice] = useState(0);
 
@@ -187,7 +243,10 @@ function GaleriaEspacio({ imagenes }: GaleriaEspacioProps) {
     const nuevoIndice = Math.round(
       evento.nativeEvent.contentOffset.x / ancho
     );
-    if (nuevoIndice !== indice) setIndice(nuevoIndice);
+
+    if (nuevoIndice !== indice) {
+      setIndice(nuevoIndice);
+    }
   };
 
   if (imagenes.length === 0) {
@@ -205,7 +264,10 @@ function GaleriaEspacio({ imagenes }: GaleriaEspacioProps) {
       style={estilos.galeria}
       onLayout={(evento) => {
         const medido = evento.nativeEvent.layout.width;
-        if (Math.abs(medido - ancho) > 0.5) setAncho(medido);
+
+        if (Math.abs(medido - ancho) > 0.5) {
+          setAncho(medido);
+        }
       }}
     >
       {ancho > 0 && (
@@ -224,7 +286,10 @@ function GaleriaEspacio({ imagenes }: GaleriaEspacioProps) {
           renderItem={({ item, index }) => (
             <Image
               source={{ uri: item }}
-              style={[estilos.foto, { width: ancho, height: alto }]}
+              style={[
+                estilos.foto,
+                { width: ancho, height: alto },
+              ]}
               resizeMode="cover"
               accessibilityLabel={`Foto ${index + 1} de ${imagenes.length}`}
             />
@@ -233,12 +298,18 @@ function GaleriaEspacio({ imagenes }: GaleriaEspacioProps) {
       )}
 
       {imagenes.length > 1 && (
-        <View style={estilos.dotsContenedor} pointerEvents="none">
+        <View
+          style={estilos.dotsContenedor}
+          pointerEvents="none"
+        >
           <View style={estilos.dotsFondo}>
             {imagenes.map((_, i) => (
               <View
                 key={i}
-                style={[estilos.dot, i === indice && estilos.dotActivo]}
+                style={[
+                  estilos.dot,
+                  i === indice && estilos.dotActivo,
+                ]}
               />
             ))}
           </View>
@@ -253,7 +324,10 @@ interface FilaCaracteristicaProps {
   valor: string;
 }
 
-function FilaCaracteristica({ label, valor }: FilaCaracteristicaProps) {
+function FilaCaracteristica({
+  label,
+  valor,
+}: FilaCaracteristicaProps) {
   const paleta = usePaleta();
   const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
 

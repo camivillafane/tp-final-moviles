@@ -418,32 +418,62 @@ export async function obtenerDetalleReserva(
   reservaId: string,
   usuarioId: string
 ): Promise<Reserva | null> {
-  if (USAR_MOCKS) return obtenerReservaLocal(reservaId, usuarioId);
+  if (!reservaId || !usuarioId) return null;
+
+  const reservaAnterior = await obtenerReservaLocal(
+    reservaId,
+    usuarioId
+  );
+
+  if (USAR_MOCKS) {
+    return reservaAnterior;
+  }
+
+  if (await estaSinConexion()) {
+    return reservaAnterior;
+  }
 
   try {
-    const reservaAnterior = await obtenerReservaLocal(reservaId, usuarioId);
-    const datos = await getUno<ReservaApi>(`/reservas/${encodeURIComponent(reservaId)}`);
+    const datos = await getUno<ReservaApi>(
+      `/reservas/${encodeURIComponent(reservaId)}`
+    );
+
     const precioEspacio =
-      reservaAnterior?.precioPorHora && reservaAnterior.precioPorHora > 0
+      reservaAnterior?.precioPorHora &&
+      reservaAnterior.precioPorHora > 0
         ? reservaAnterior.precioPorHora
-        : (await getUno<Espacio>(`/espacios/${datos.espacioId}`).catch(() => null))
-            ?.precioPorHora;
-    const reserva = await normalizarReservaApi(datos, {
-      usuarioId,
-      turnoId: datos.turnoId,
-      espacioId: reservaAnterior?.espacioId ?? datos.espacioId,
-      fecha: reservaAnterior?.fecha || datos.fecha,
-      inicio: reservaAnterior?.inicio || datos.inicio,
-      fin: reservaAnterior?.fin || datos.fin,
-      cantidadPersonas: datos.cantidadPersonas,
-      precioPorHora: datos.precioPorHora ?? precioEspacio,
-    }, reservaAnterior ?? undefined);
+        : (
+            await getUno<Espacio>(
+              `/espacios/${datos.espacioId}`
+            ).catch(() => null)
+          )?.precioPorHora;
+
+    const reserva = normalizarReservaApi(
+      datos,
+      {
+        usuarioId,
+        turnoId: datos.turnoId,
+        espacioId: reservaAnterior?.espacioId ?? datos.espacioId,
+        fecha: reservaAnterior?.fecha || datos.fecha,
+        inicio: reservaAnterior?.inicio || datos.inicio,
+        fin: reservaAnterior?.fin || datos.fin,
+        cantidadPersonas: datos.cantidadPersonas,
+        precioPorHora: datos.precioPorHora ?? precioEspacio,
+      },
+      reservaAnterior ?? undefined
+    );
+
     await guardarReservaLocal(reserva);
+
     return reserva;
   } catch (error) {
-    if (error instanceof ErrorServicio && error.codigo === "ERROR_RED") {
-      return obtenerReservaLocal(reservaId, usuarioId);
+    if (
+      error instanceof ErrorServicio &&
+      error.codigo === "ERROR_RED"
+    ) {
+      return reservaAnterior;
     }
+
     throw error;
   }
 }
