@@ -18,6 +18,7 @@ import { guardarReservaLocal } from "@/servicios/dbServicios";
 import { useSesion } from "@/contextos/Sesion";
 import { EstadoConexion } from "@/componentes/EstadoConexion";
 import type { Espacio } from "@/tipos/espacio";
+import { programarRecordatorioReserva } from "@/servicios/notificacionesLocales";
 
 export default function ConfirmarReservaPantalla() {
   const router = useRouter();
@@ -120,6 +121,12 @@ export default function ConfirmarReservaPantalla() {
   );
 
   await guardarReservaLocal(nuevaReserva);
+
+  try {
+    await programarRecordatorioReserva(nuevaReserva, espacio.nombre);
+  } catch (error) {
+    console.warn("La reserva se confirmó, pero no se pudo programar el recordatorio.", error);
+  }
 
       Alert.alert(
         "¡Reserva confirmada!",
