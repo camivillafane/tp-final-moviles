@@ -324,26 +324,38 @@ export async function listarMisReservas(usuarioId: string): Promise<Reserva[]> {
   if (USAR_MOCKS) return obtenerReservasLocales(usuarioId);
 
   try {
-    const [proximas, pasadas] = await Promise.all([
+    const [proximas, pasadas, espaciosRespuesta] = await Promise.all([
       getLista<ReservaApi>("/yo/reservas", { cuando: "proximas", pagina: 1, porPagina: 100 }),
       getLista<ReservaApi>("/yo/reservas", { cuando: "pasadas", pagina: 1, porPagina: 100 }),
+      getLista<Espacio>("/espacios", { pagina: 1, porPagina: 100 }).catch(() => null),
     ]);
+    const preciosPorEspacio = new Map(
+      (espaciosRespuesta?.datos ?? []).map((espacio) => [espacio.id, espacio.precioPorHora])
+    );
     const reservasLocales = await obtenerReservasLocales(usuarioId);
     const reservasLocalesPorId = new Map(
       reservasLocales.map((reserva) => [reserva.id, reserva])
     );
     const reservas = await Promise.all(
       [...proximas.datos, ...pasadas.datos].map((reserva) =>
-        normalizarReservaApi(reserva, {
-          usuarioId: reserva.usuarioId || usuarioId,
-          turnoId: reserva.turnoId,
-          espacioId: reserva.espacioId ?? reservasLocalesPorId.get(reserva.id)?.espacioId,
-          fecha: reserva.fecha ?? reservasLocalesPorId.get(reserva.id)?.fecha,
-          inicio: reserva.inicio ?? reservasLocalesPorId.get(reserva.id)?.inicio,
-          fin: reserva.fin ?? reservasLocalesPorId.get(reserva.id)?.fin,
-          cantidadPersonas: reserva.cantidadPersonas,
-          precioPorHora: reserva.precioPorHora ?? reservasLocalesPorId.get(reserva.id)?.precioPorHora,
-        }, reservasLocalesPorId.get(reserva.id))
+        (() => {
+          const local = reservasLocalesPorId.get(reserva.id);
+          const precioLocal = local?.precioPorHora;
+          return normalizarReservaApi(reserva, {
+            usuarioId: reserva.usuarioId || usuarioId,
+            turnoId: reserva.turnoId,
+            espacioId: reserva.espacioId ?? local?.espacioId,
+            fecha: reserva.fecha ?? local?.fecha,
+            inicio: reserva.inicio ?? local?.inicio,
+            fin: reserva.fin ?? local?.fin,
+            cantidadPersonas: reserva.cantidadPersonas,
+            precioPorHora:
+              reserva.precioPorHora ??
+              (precioLocal && precioLocal > 0
+                ? precioLocal
+                : preciosPorEspacio.get(reserva.espacioId)),
+          }, local);
+        })()
       )
     );
     await Promise.all(reservas.map((reserva) => guardarReservaLocal(reserva)));

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -30,6 +30,12 @@ export default function MisReservasPantalla() {
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [ahora, setAhora] = useState(() => new Date());
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 30_000);
+    return () => clearInterval(intervalo);
+  }, []);
 
 
   const cargarReservas = useCallback(async () => {
@@ -90,13 +96,18 @@ export default function MisReservasPantalla() {
   const renderItem = ({ item }: { item: Reserva }) => {
     const espacio = espacios.find((e) => e.id === item.espacioId);
     const esConfirmada = item.estado === "confirmada";
+    const esPasada = terminoTurno(item.fecha, item.fin, ahora);
     const etiquetaEstado =
       item.estado === "confirmada" ? "Confirmada" :
       item.estado === "cancelada" ? "Cancelada" :
       item.estado === "cumplida" ? "Cumplida" : "Ausente";
 
     return (
-      <View style={[estilos.tarjeta, !esConfirmada && estilos.tarjetaCancelada]}>
+      <View style={[
+        estilos.tarjeta,
+        !esConfirmada && estilos.tarjetaCancelada,
+        esPasada && estilos.tarjetaPasada,
+      ]}>
         <View style={estilos.cabeceraTarjeta}>
           <Text style={estilos.nombreEspacio}>
             {espacio ? espacio.nombre : "Espacio deportivo"}
@@ -211,6 +222,7 @@ const estilos = StyleSheet.create({
   lista: { padding: 16 },
   tarjeta: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
   tarjetaCancelada: { opacity: 0.6 },
+  tarjetaPasada: { backgroundColor: "#ECEFF1", borderColor: "#D5DADD", borderWidth: 1, elevation: 0, shadowOpacity: 0 },
   cabeceraTarjeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   nombreEspacio: { fontSize: 16, fontWeight: "bold", color: "#1A1A1A", flex: 1 },
   badgeEstado: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
@@ -227,3 +239,10 @@ const estilos = StyleSheet.create({
   contenedorVacio: { flex: 1, justifyContent: "center", alignItems: "center" },
   textoVacio: { fontSize: 16, color: "#888888" },
 });
+
+function terminoTurno(fecha: string, horaFin: string, ahora: Date): boolean {
+  const [anio, mes, dia] = fecha.split("-").map(Number);
+  const [hora, minuto] = horaFin.split(":").map(Number);
+  if (![anio, mes, dia, hora, minuto].every(Number.isFinite)) return false;
+  return new Date(anio, mes - 1, dia, hora, minuto).getTime() <= ahora.getTime();
+}

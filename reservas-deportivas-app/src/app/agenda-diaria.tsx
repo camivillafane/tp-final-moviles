@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   ActivityIndicator,
@@ -53,7 +53,13 @@ export default function AgendaDiariaPantalla() {
   const [datos, setDatos] = useState<DatosAgenda | null>(null);
   const [cargandoAgenda, setCargandoAgenda] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ahora, setAhora] = useState(() => new Date());
   const consultaActual = useRef(0);
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 30_000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   const cargar = useCallback(async () => {
     const idConsulta = ++consultaActual.current;
@@ -206,13 +212,20 @@ export default function AgendaDiariaPantalla() {
                   const reserva = turno.reservaId
                     ? reservasPorId.get(turno.reservaId)
                     : undefined;
+                  const esPasado = terminoTurno(fecha, turno.fin, ahora);
                   return (
-                    <View key={turno.id} style={[estilos.tarjetaTurno, turno.estado === "mantenimiento" && estilos.tarjetaBloqueada]}>
+                    <View key={turno.id} style={[
+                      estilos.tarjetaTurno,
+                      turno.estado === "mantenimiento" && estilos.tarjetaBloqueada,
+                      esPasado && estilos.tarjetaPasada,
+                    ]}>
                       <Text style={estilos.horario}>
                         {turno.inicio} – {turno.fin}
                       </Text>
-                      <View style={[estilos.estado, estiloEstado(turno.estado)]}>
-                        <Text style={estilos.textoEstado}>{etiquetaEstado(turno)}</Text>
+                      <View style={[estilos.estado, estiloEstado(turno.estado), esPasado && estilos.estadoPasado]}>
+                        <Text style={estilos.textoEstado}>
+                          {esPasado ? `Pasado · ${etiquetaEstado(turno)}` : etiquetaEstado(turno)}
+                        </Text>
                       </View>
                       {turno.estado === "mantenimiento" && turno.motivoBloqueo && (
                         <Text style={estilos.motivoBloqueo}>Motivo: {turno.motivoBloqueo}</Text>
@@ -306,12 +319,14 @@ const estilos = StyleSheet.create({
     paddingVertical: 10,
   },
   tarjetaBloqueada: { backgroundColor: "#fff0f0", borderRadius: 8, paddingHorizontal: 7 },
+  tarjetaPasada: { backgroundColor: "#ECEFF1", borderRadius: 8, paddingHorizontal: 7 },
   horario: { color: colores.textoOscuro, fontSize: 14, fontWeight: "600", minWidth: 98 },
   estado: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   estado_libre: { backgroundColor: "#e5f2e8" },
   estado_reservado: { backgroundColor: "#f3e1e1" },
   estado_fijo: { backgroundColor: "#eee5f2" },
   estado_mantenimiento: { backgroundColor: "#f8d7da" },
+  estadoPasado: { backgroundColor: "#DDE2E5" },
   textoEstado: { color: colores.textoOscuro, fontSize: 12, fontWeight: "600" },
   motivoBloqueo: { color: colores.verdeGrisaceo, flexBasis: "100%", fontSize: 12 },
   detalleReserva: { color: colores.verdeGrisaceo, flexBasis: "100%", fontSize: 12 },
@@ -323,6 +338,13 @@ const estilos = StyleSheet.create({
   botonReintentar: { backgroundColor: colores.verdePrincipal, borderRadius: 8, paddingHorizontal: 18, paddingVertical: 11 },
   textoBoton: { color: colores.blanco, fontSize: 14, fontWeight: "700" },
 });
+
+function terminoTurno(fecha: string, horaFin: string, ahora: Date): boolean {
+  const [anio, mes, dia] = fecha.split("-").map(Number);
+  const [hora, minuto] = horaFin.split(":").map(Number);
+  if (![anio, mes, dia, hora, minuto].every(Number.isFinite)) return false;
+  return new Date(anio, mes - 1, dia, hora, minuto).getTime() <= ahora.getTime();
+}
 
 function estiloEstado(estado: Turno["estado"]) {
   switch (estado) {

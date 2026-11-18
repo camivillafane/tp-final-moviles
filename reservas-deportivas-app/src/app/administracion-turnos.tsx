@@ -246,7 +246,7 @@ export default function AdministracionTurnosPantalla() {
               <Text style={estilos.tituloTarjeta}>Crear bloqueo</Text>
               <Text style={estilos.ayuda}>Elegí un espacio y una fecha. Un bloqueo de día completo afecta todos sus horarios.</Text>
               <SelectorEspacio espacios={espacios} valor={espacioId} onChange={setEspacioId} />
-              <Campo etiqueta="Fecha (AAAA-MM-DD)" valor={fechaBloqueo} onChange={setFechaBloqueo} placeholder="2026-11-17" />
+              <SelectorFecha etiqueta="Fecha del bloqueo" valor={fechaBloqueo} onChange={setFechaBloqueo} />
               <FilaSwitch etiqueta="Bloquear el día completo" valor={diaCompleto} onChange={setDiaCompleto} />
               {!diaCompleto && <View style={estilos.fila}>
                 <Campo compacto etiqueta="Desde (08:00–24:00)" valor={inicioBloqueo} onChange={setInicioBloqueo} placeholder="08:00" />
@@ -288,8 +288,8 @@ export default function AdministracionTurnosPantalla() {
                 />
                 <SelectorHora etiqueta="Hasta" valor={finFija} opciones={horasFinFija} onChange={setFinFija} />
               </View>
-              <Campo etiqueta="Vigente desde (AAAA-MM-DD)" valor={desdeFija} onChange={setDesdeFija} placeholder="2026-11-17" />
-              <Campo etiqueta="Vigente hasta (opcional)" valor={hastaFija} onChange={setHastaFija} placeholder="Sin fecha de fin" />
+              <SelectorFecha etiqueta="Vigente desde" valor={desdeFija} onChange={setDesdeFija} />
+              <SelectorFecha etiqueta="Vigente hasta (opcional)" valor={hastaFija} onChange={setHastaFija} opcional />
               <Boton texto={guardando ? "Guardando..." : editandoFijaId ? "Guardar cambios" : "Crear reserva fija"} onPress={() => void guardarFija()} deshabilitado={guardando} />
               {editandoFijaId && <Pressable onPress={cancelarEdicionFija} style={estilos.cancelarEdicion}><Text style={estilos.textoCancelar}>Cancelar edición</Text></Pressable>}
             </View> : <View style={estilos.aviso}><Text style={estilos.secundario}>Solo administradores pueden crear o dar de baja reservas fijas.</Text></View>}
@@ -343,6 +343,73 @@ function SelectorHora({ etiqueta, valor, opciones, onChange }: { etiqueta: strin
               {hora === valor && <IonIcons name="checkmark" size={20} color={colores.verdePrincipal} />}
             </Pressable>)}
           </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  </View>;
+}
+
+function SelectorFecha({ etiqueta, valor, onChange, opcional = false }: { etiqueta: string; valor: string; onChange: (valor: string) => void; opcional?: boolean }) {
+  const [visible, setVisible] = useState(false);
+  const [mesVisible, setMesVisible] = useState(() => {
+    const [anio, mes, dia] = (valor || fechaHoy()).split("-").map(Number);
+    return new Date(anio, mes - 1, dia || 1);
+  });
+  const anio = mesVisible.getFullYear();
+  const mes = mesVisible.getMonth();
+  const primerDiaSemana = new Date(anio, mes, 1).getDay();
+  const diasDelMes = new Date(anio, mes + 1, 0).getDate();
+  const celdas: (number | null)[] = [
+    ...Array.from({ length: primerDiaSemana }, () => null),
+    ...Array.from({ length: diasDelMes }, (_, indice) => indice + 1),
+  ];
+
+  const abrirCalendario = () => {
+    const [anioSeleccionado, mesSeleccionado, diaSeleccionado] = (valor || fechaHoy()).split("-").map(Number);
+    setMesVisible(new Date(anioSeleccionado, mesSeleccionado - 1, diaSeleccionado || 1));
+    setVisible(true);
+  };
+
+  return <View>
+    <Text style={estilos.etiqueta}>{etiqueta}</Text>
+    <Pressable style={estilos.selectorFecha} onPress={abrirCalendario} accessibilityRole="button" accessibilityLabel={`${etiqueta}: ${valor ? fechaLegible(valor) : "Sin fecha de fin"}`}>
+      <Text style={[estilos.valorFecha, !valor && estilos.valorFechaVacio]}>{valor ? fechaLegible(valor) : "Sin fecha de fin"}</Text>
+      <IonIcons name="calendar-outline" size={20} color={colores.verdePrincipal} />
+    </Pressable>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setVisible(false)}>
+      <Pressable style={estilos.fondoModal} onPress={() => setVisible(false)}>
+        <Pressable style={estilos.modalCalendario} onPress={(evento) => evento.stopPropagation()}>
+          <View style={estilos.encabezadoModal}>
+            <Text style={estilos.tituloModal}>Seleccionar fecha</Text>
+            <Pressable onPress={() => setVisible(false)} accessibilityLabel="Cerrar calendario">
+              <IonIcons name="close" size={24} color={colores.verdePrincipal} />
+            </Pressable>
+          </View>
+          <View style={estilos.navegacionMes}>
+            <Pressable onPress={() => setMesVisible(new Date(anio, mes - 1, 1))} accessibilityLabel="Mes anterior" style={estilos.botonMes}>
+              <IonIcons name="chevron-back" size={21} color={colores.verdePrincipal} />
+            </Pressable>
+            <Text style={estilos.nombreMes}>{new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" }).format(mesVisible)}</Text>
+            <Pressable onPress={() => setMesVisible(new Date(anio, mes + 1, 1))} accessibilityLabel="Mes siguiente" style={estilos.botonMes}>
+              <IonIcons name="chevron-forward" size={21} color={colores.verdePrincipal} />
+            </Pressable>
+          </View>
+          <View style={estilos.grillaCalendario}>
+            {["D", "L", "M", "M", "J", "V", "S"].map((dia, indice) => (
+              <Text key={`${dia}-${indice}`} style={estilos.encabezadoDia}>{dia}</Text>
+            ))}
+            {celdas.map((dia, indice) => {
+              if (dia === null) return <View key={`vacio-${indice}`} style={estilos.celdaDia} />;
+              const fechaDia = `${anio}-${String(mes + 1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+              const seleccionado = fechaDia === valor;
+              return <Pressable key={fechaDia} style={[estilos.celdaDia, seleccionado && estilos.celdaDiaActiva]} onPress={() => { onChange(fechaDia); setVisible(false); }} accessibilityRole="button" accessibilityLabel={fechaLegible(fechaDia)}>
+                <Text style={[estilos.textoDiaCalendario, seleccionado && estilos.textoDiaCalendarioActivo]}>{dia}</Text>
+              </Pressable>;
+            })}
+          </View>
+          {opcional && <Pressable style={estilos.botonSinFecha} onPress={() => { onChange(""); setVisible(false); }}>
+            <Text style={estilos.textoSinFecha}>Dejar sin fecha de fin</Text>
+          </Pressable>}
         </Pressable>
       </Pressable>
     </Modal>
@@ -410,9 +477,24 @@ const estilos = StyleSheet.create({
   dias: { flexDirection: "row", justifyContent: "space-between", gap: 4 },
   selectorHoraContenedor: { flex: 1 },
   selectorHora: { alignItems: "center", backgroundColor: colores.blanco, borderColor: colores.borde, borderRadius: 9, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 44, paddingHorizontal: 11 },
+  selectorFecha: { alignItems: "center", backgroundColor: colores.blanco, borderColor: colores.borde, borderRadius: 9, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 44, paddingHorizontal: 11 },
+  valorFecha: { color: colores.textoOscuro, fontSize: 15, fontWeight: "600" },
+  valorFechaVacio: { color: colores.verdeGrisaceo, fontWeight: "400" },
   valorHora: { color: colores.textoOscuro, fontSize: 15, fontWeight: "600" },
   fondoModal: { backgroundColor: "rgba(0, 0, 0, 0.42)", flex: 1, justifyContent: "center", padding: 24 },
   modalHoras: { backgroundColor: colores.blanco, borderRadius: 16, maxHeight: "75%", padding: 16 },
+  modalCalendario: { backgroundColor: colores.blanco, borderRadius: 16, padding: 16 },
+  navegacionMes: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingVertical: 10 },
+  botonMes: { alignItems: "center", justifyContent: "center", minHeight: 40, width: 40 },
+  nombreMes: { color: colores.textoOscuro, fontSize: 16, fontWeight: "700", textTransform: "capitalize" },
+  grillaCalendario: { flexDirection: "row", flexWrap: "wrap" },
+  encabezadoDia: { color: colores.verdeGrisaceo, fontSize: 12, fontWeight: "700", textAlign: "center", width: "14.2857%", paddingVertical: 8 },
+  celdaDia: { alignItems: "center", justifyContent: "center", minHeight: 42, width: "14.2857%" },
+  celdaDiaActiva: { backgroundColor: colores.verdePrincipal, borderRadius: 21 },
+  textoDiaCalendario: { color: colores.textoOscuro, fontSize: 14 },
+  textoDiaCalendarioActivo: { color: colores.blanco, fontWeight: "700" },
+  botonSinFecha: { alignItems: "center", borderTopColor: colores.borde, borderTopWidth: StyleSheet.hairlineWidth, marginTop: 8, paddingTop: 12 },
+  textoSinFecha: { color: colores.verdePrincipal, fontSize: 14, fontWeight: "600" },
   encabezadoModal: { alignItems: "center", borderBottomColor: colores.borde, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", justifyContent: "space-between", paddingBottom: 12 },
   tituloModal: { color: colores.textoOscuro, fontSize: 17, fontWeight: "700" },
   listaHoras: { marginTop: 6 },
