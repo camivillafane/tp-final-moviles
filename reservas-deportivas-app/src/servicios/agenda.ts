@@ -55,7 +55,10 @@ export async function obtenerAgenda(fecha: string): Promise<DatosAgenda> {
     obtenerTodasLasReservasLocales(),
   ]);
 
-  const reservas = reservasApi.map((reserva) => ({ ...reserva, origen: "api" as const }));
+  const reservas: ReservaAgenda[] = reservasApi.map((reserva) => ({
+    ...reserva,
+    origen: "api",
+  }));
   const turnosCombinados = [...turnos];
 
   for (const reservaLocal of reservasLocales) {
