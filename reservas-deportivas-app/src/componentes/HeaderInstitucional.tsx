@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import IonIcons from "@react-native-vector-icons/ionicons";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 
 interface HeaderInstitucionalProps {
   onPerfilPress?: () => void;
@@ -13,12 +15,15 @@ export function HeaderInstitucional({
   mostrarVolver = false,
   onVolverPress,
 }: HeaderInstitucionalProps) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   return (
     <View style={estilos.contenedor}>
       <View style={estilos.lado}>
         {mostrarVolver && onVolverPress ? (
           <Pressable onPress={onVolverPress} style={estilos.boton}>
-            <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
+            <IonIcons name="arrow-back" size={26} color={paleta.verdePrincipal} />
           </Pressable>
         ) : (
           <View style={estilos.boton} />
@@ -41,7 +46,11 @@ export function HeaderInstitucional({
             accessibilityRole="button"
             accessibilityLabel="Abrir menú de perfil"
           >
-            <IonIcons name="person-circle-outline" size={36} color={colores.verdePrincipal} />
+            <IonIcons
+              name="person-circle-outline"
+              size={36}
+              color={paleta.verdePrincipal}
+            />
           </Pressable>
         ) : (
           <View style={estilos.boton} />
@@ -51,33 +60,34 @@ export function HeaderInstitucional({
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: {
-    alignItems: "center",
-    backgroundColor: colores.fondo,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  lado: {
-    alignItems: "flex-start",
-    flex: 1,
-  },
-  ladoDerecho: {
-    alignItems: "flex-end",
-  },
-  centro: {
-    alignItems: "center",
-    flex: 2,
-  },
-  logo: {
-    height: 48,
-    width: 140,
-  },
-  boton: {
-    height: 40,
-    justifyContent: "center",
-    width: 40,
-  },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: {
+      alignItems: "center",
+      backgroundColor: paleta.fondo,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    lado: {
+      alignItems: "flex-start",
+      flex: 1,
+    },
+    ladoDerecho: {
+      alignItems: "flex-end",
+    },
+    centro: {
+      alignItems: "center",
+      flex: 2,
+    },
+    logo: {
+      height: 48,
+      width: 140,
+    },
+    boton: {
+      height: 40,
+      justifyContent: "center",
+      width: 40,
+    },
+  });

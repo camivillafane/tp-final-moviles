@@ -17,7 +17,8 @@ import { Buscador } from "@/componentes/Buscador";
 import { ChipDisciplina } from "@/componentes/ChipDisciplina";
 import { ChipFiltro } from "@/componentes/ChipFiltro";
 import { CardEspacio } from "@/componentes/CardEspacio";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { listarEspacios } from "@/servicios/espacios";
 import { listarDeportes } from "@/servicios/deportes";
 import { MenuPerfil } from "@/componentes/MenuPerfil";
@@ -27,6 +28,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function Home() {
   const router = useRouter();
   const { usuario, cerrarSesion } = useSesion();
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
   const [menuPerfilVisible, setMenuPerfilVisible] = useState(false);
 
   const [espacios, setEspacios] = useState<Espacio[]>([]);
@@ -143,6 +146,9 @@ export default function Home() {
           <RefreshControl
             refreshing={refrescando}
             onRefresh={refrescar}
+            tintColor={paleta.verdePrincipal}
+            colors={[paleta.verdePrincipal]}
+            progressBackgroundColor={paleta.superficie}
             />
         }
       >
@@ -155,7 +161,7 @@ export default function Home() {
           contentContainerStyle={estilos.chips}
         >
           <ChipDisciplina
-            deporte={{ id: "todos", nombre: "Todos", icono: "apps-outline", color: colores.verdePrincipal }}
+            deporte={{ id: "todos", nombre: "Todos", icono: "apps-outline", color: paleta.verdeBoton }}
             seleccionado={deporteSeleccionado === null}
             onPress={() => setDeporteSeleccionado(null)}
           />
@@ -231,43 +237,44 @@ export default function Home() {
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: {
-    backgroundColor: colores.fondo,
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  contenidoScroll: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  tituloSeccion: {
-    color: colores.textoOscuro,
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-    marginTop: 20,
-  },
-  chips: {
-    paddingBottom: 4,
-  },
-  bloqueMapa: {
-    backgroundColor: colores.verdePrincipal,
-    borderRadius: 16,
-    marginTop: 20,
-    padding: 20,
-  },
-  tituloMapa: {
-    color: colores.blanco,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  subtituloMapa: {
-    color: colores.blanco,
-    fontSize: 13,
-    marginTop: 4,
-    opacity: 0.9,
-  },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: {
+      backgroundColor: paleta.fondo,
+      flex: 1,
+    },
+    scroll: {
+      flex: 1,
+    },
+    contenidoScroll: {
+      padding: 16,
+      paddingBottom: 32,
+    },
+    tituloSeccion: {
+      color: paleta.textoOscuro,
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 12,
+      marginTop: 20,
+    },
+    chips: {
+      paddingBottom: 4,
+    },
+    bloqueMapa: {
+      backgroundColor: paleta.verdeBoton,
+      borderRadius: 16,
+      marginTop: 20,
+      padding: 20,
+    },
+    tituloMapa: {
+      color: paleta.textoInvertido,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    subtituloMapa: {
+      color: paleta.textoInvertido,
+      fontSize: 13,
+      marginTop: 4,
+      opacity: 0.9,
+    },
+  });
