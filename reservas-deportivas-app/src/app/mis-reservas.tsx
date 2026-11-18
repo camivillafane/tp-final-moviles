@@ -97,6 +97,12 @@ export default function MisReservasPantalla() {
     const espacio = espacios.find((e) => e.id === item.espacioId);
     const esConfirmada = item.estado === "confirmada";
     const esPasada = terminoTurno(item.fecha, item.fin, ahora);
+    const limiteCancelacion = item.cancelableHasta
+      ? Date.parse(item.cancelableHasta)
+      : Number.NaN;
+    const puedeCancelar = Number.isFinite(limiteCancelacion)
+      ? ahora.getTime() <= limiteCancelacion
+      : true;
     const etiquetaEstado =
       item.estado === "confirmada" ? "Confirmada" :
       item.estado === "cancelada" ? "Cancelada" :
@@ -166,13 +172,24 @@ export default function MisReservasPantalla() {
               <Text style={estilos.textoBotonQr}>Ver QR</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={estilos.botonCancelar}
-              onPress={() => handleCancelar(item.id)}
-            >
-              <Text style={estilos.textoBotonCancelar}>Cancelar</Text>
-            </TouchableOpacity>
+            {puedeCancelar ? (
+              <TouchableOpacity
+                style={estilos.botonCancelar}
+                onPress={() => handleCancelar(item.id)}
+              >
+                <Text style={estilos.textoBotonCancelar}>Cancelar</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={[estilos.botonCancelar, estilos.botonCancelacionVencida]}>
+                <Text style={estilos.textoCancelacionVencida}>Plazo vencido</Text>
+              </View>
+            )}
           </View>
+        )}
+        {esConfirmada && !puedeCancelar && (
+          <Text style={estilos.avisoCancelacion}>
+            Para avisar una cancelación tardía, comunicate con el encargado del espacio.
+          </Text>
         )}
       </View>
     );
@@ -234,6 +251,9 @@ const estilos = StyleSheet.create({
   textoBotonQr: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
   botonCancelar: { flex: 1, backgroundColor: "#FFEBEE", paddingVertical: 8, borderRadius: 8, alignItems: "center", marginLeft: 8 },
   textoBotonCancelar: { color: "#C62828", fontWeight: "bold", fontSize: 14 },
+  botonCancelacionVencida: { backgroundColor: "#EEEEEE" },
+  textoCancelacionVencida: { color: "#666666", fontWeight: "bold", fontSize: 14 },
+  avisoCancelacion: { color: "#666666", fontSize: 13, marginTop: 10 },
   botonDetalle: {alignSelf: "flex-start", backgroundColor: "#E8F5E9", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginBottom: 12,},
   textoBotonDetalle: {color: "#2E7D32", fontWeight: "bold", fontSize: 14,},
   contenedorVacio: { flex: 1, justifyContent: "center", alignItems: "center" },

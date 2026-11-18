@@ -29,6 +29,14 @@ export const inicializarBaseDeDatos = async () => {
     );
   `);
 
+  // Migración para instalaciones que ya tenían creada la tabla local.
+  const columnasReserva = await db.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(reservas_locales);"
+  );
+  if (!columnasReserva.some((columna) => columna.name === "cancelableHasta")) {
+    await db.execAsync("ALTER TABLE reservas_locales ADD COLUMN cancelableHasta TEXT;");
+  }
+
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS favoritos_locales (
@@ -105,8 +113,8 @@ export const eliminarFavoritoLocal = async (
 export const guardarReservaLocal = async (reserva: Reserva): Promise<void> => {
   const db = await abrirBaseDeDatos();
   await db.runAsync(
-    `INSERT OR REPLACE INTO reservas_locales (id, usuarioId, espacioId, fecha, inicio, fin, cantidadPersonas, precioPorHora, precioTotal, estado, qrToken, creadaEn, canceladaEn) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    `INSERT OR REPLACE INTO reservas_locales (id, usuarioId, espacioId, fecha, inicio, fin, cantidadPersonas, precioPorHora, precioTotal, estado, qrToken, creadaEn, canceladaEn, cancelableHasta)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     [
       reserva.id,
       reserva.usuarioId,
@@ -121,6 +129,7 @@ export const guardarReservaLocal = async (reserva: Reserva): Promise<void> => {
       reserva.qrToken,
       reserva.creadaEn,
       reserva.canceladaEn || null,
+      reserva.cancelableHasta,
     ]
   );
 };
@@ -148,6 +157,7 @@ export const obtenerReservasLocales = async (usuarioId: string): Promise<Reserva
     qrToken: row.qrToken,
     creadaEn: row.creadaEn,
     canceladaEn: row.canceladaEn,
+    cancelableHasta: row.cancelableHasta ?? null,
   }));
 };
 
@@ -250,4 +260,4 @@ export async function obtenerNombreUsuario(usuarioId: string): Promise<string | 
   );
 
   return usuario?.nombre ?? null;
-} 
+}
