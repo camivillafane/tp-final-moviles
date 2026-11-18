@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from "react";
+import { useCallback, useState, type ComponentProps } from "react";
 import {
     ScrollView,
     View,
@@ -7,7 +7,7 @@ import {
     Alert,
     Pressable,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -26,9 +26,27 @@ import {
 
 export default function Perfil() {
     const router = useRouter();
-    const { usuario } = useSesion();
+    const { usuario, actualizarUsuario } = useSesion();
 
     const [biometriaActiva, setBiometriaActiva] = useState(false);
+    const [errorActualizacion, setErrorActualizacion] = useState(false);
+
+    useFocusEffect(
+        useCallback(() => {
+            let activa = true;
+            actualizarUsuario()
+                .then(() => {
+                    if (activa) setErrorActualizacion(false);
+                })
+                .catch(() => {
+                    if (activa) setErrorActualizacion(true);
+                });
+
+            return () => {
+                activa = false;
+            };
+        }, [actualizarUsuario])
+    );
 
     const activarBiometria = async () => {
         try {
@@ -123,6 +141,24 @@ export default function Perfil() {
                         valor={usuario.telefono}
                     />
                 </View>
+
+                {usuario.rol === "jugador" && (
+                    <>
+                        <Text style={estilos.titulo}>Actividad de la cuenta</Text>
+                        <View style={estilos.cardDatos}>
+                            <Fila
+                                icono="time-outline"
+                                etiqueta="Cancelaciones tardías"
+                                valor={String(usuario.cancelacionesTardias ?? 0)}
+                            />
+                        </View>
+                        {errorActualizacion && (
+                            <Text style={estilos.avisoActualizacion}>
+                                Sin conexión: se muestra el último dato guardado.
+                            </Text>
+                        )}
+                    </>
+                )}
 
                 <Pressable
                     style={estilos.botonBiometria}
@@ -225,6 +261,11 @@ const estilos = StyleSheet.create({
         color: colores.verdeGrisaceo,
         fontSize: 16,
         fontWeight: "500",
+    },
+    avisoActualizacion: {
+        color: colores.verdeGrisaceo,
+        fontSize: 13,
+        marginTop: 8,
     },
     separador: {
         backgroundColor: colores.borde,

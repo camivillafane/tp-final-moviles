@@ -15,6 +15,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useSesion } from "@/contextos/Sesion";
 import { colores } from "@/constantes/colores";
 import { obtenerAgenda, type DatosAgenda } from "@/servicios/agenda";
+import { cancelarReserva } from "@/servicios/reservas";
 import { cancelarReservaLocal } from "@/servicios/dbServicios";
 import type { Turno } from "@/tipos/turno";
 
@@ -112,6 +113,33 @@ export default function AgendaDiariaPantalla() {
             try {
               await cancelarReservaLocal(reservaId, usuarioId);
               await cargar();
+            } catch (fallo) {
+              Alert.alert(
+                "No se pudo cancelar",
+                fallo instanceof Error ? fallo.message : "Intentá nuevamente."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const confirmarCancelacionApi = (reservaId: string) => {
+    Alert.alert(
+      "Cancelar reserva",
+      "La cancelación se procesará en el servidor. Si es tardía, se actualizará el contador del jugador.",
+      [
+        { text: "Volver", style: "cancel" },
+        {
+          text: "Cancelar reserva",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (!usuario) return;
+              await cancelarReserva(reservaId, usuario.id);
+              await cargar();
+              Alert.alert("Reserva cancelada", "La agenda se actualizó correctamente.");
             } catch (fallo) {
               Alert.alert(
                 "No se pudo cancelar",
@@ -244,6 +272,14 @@ export default function AgendaDiariaPantalla() {
                               onPress={() => confirmarCancelacionLocal(reserva.id, reserva.usuarioId)}
                             >
                               <Text style={estilos.textoCancelarLocal}>Cancelar reserva local</Text>
+                            </Pressable>
+                          )}
+                          {reserva.origen === "api" && reserva.estado === "confirmada" && (
+                            <Pressable
+                              style={estilos.botonCancelarLocal}
+                              onPress={() => confirmarCancelacionApi(reserva.id)}
+                            >
+                              <Text style={estilos.textoCancelarLocal}>Cancelar reserva</Text>
                             </Pressable>
                           )}
                         </>
