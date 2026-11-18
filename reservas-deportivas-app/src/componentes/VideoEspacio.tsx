@@ -1,20 +1,24 @@
-import {useCallback} from 'react';
-import { useFocusEffect} from "expo-router";
+import { useCallback, useMemo } from "react";
+import { useFocusEffect } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { StyleSheet, View, Text } from "react-native";
-import { colores } from "../constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 
 interface VideoEspacioProps {
     url: string | null;
 }
 
 export function VideoEspacio({ url }: VideoEspacioProps) {
+    const paleta = usePaleta();
+    const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
     if (!url) {
         return (
             <View style={estilos.sinVideo}>
                 <Text style={estilos.textoSinVideo}>
                     Este espacio todavía no tiene un video.
-                    </Text>
+                </Text>
             </View>
         );
     }
@@ -23,6 +27,9 @@ export function VideoEspacio({ url }: VideoEspacioProps) {
 }
 
 function Reproductor({ url }: { url: string }) {
+    const paleta = usePaleta();
+    const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
     const player = useVideoPlayer(url, (p) => {
         p.loop = false;
     });
@@ -40,29 +47,32 @@ function Reproductor({ url }: { url: string }) {
             player={player}
             style={estilos.video}
             nativeControls
-            contentFit='cover'
-            fullscreenOptions={{enable:true}}
+            contentFit="cover"
+            fullscreenOptions={{ enable: true }}
         />
     );
 }
 
-const estilos = StyleSheet.create({
-    video: {
-        aspectRatio: 16 / 9,
-        borderRadius: 10,
-        overflow: 'hidden',
-        width: '100%',
-    },
-    sinVideo: {
-        alignItems: 'center',
-        borderRadius: 10,
-        justifyContent: 'center',
-        paddingVertical: 24,
-        width: '100%',
-    },
-    textoSinVideo: {
-        color: colores.verdeGrisaceo,
-        fontSize: 16,
-        textAlign: 'center',
-    },
-});
+const crearEstilos = (paleta: Paleta) =>
+    StyleSheet.create({
+        video: {
+            aspectRatio: 16 / 9,
+            backgroundColor: paleta.superficieAlt,
+            borderRadius: 10,
+            overflow: "hidden",
+            width: "100%",
+        },
+        sinVideo: {
+            alignItems: "center",
+            backgroundColor: paleta.superficieAlt,
+            borderRadius: 10,
+            justifyContent: "center",
+            paddingVertical: 24,
+            width: "100%",
+        },
+        textoSinVideo: {
+            color: paleta.verdeGrisaceo,
+            fontSize: 16,
+            textAlign: "center",
+        },
+    });

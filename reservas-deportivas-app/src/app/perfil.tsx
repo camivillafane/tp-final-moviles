@@ -1,94 +1,22 @@
-import { useCallback, useState, type ComponentProps } from "react";
-import {
-    ScrollView,
-    View,
-    Text,
-    StyleSheet,
-    Alert,
-    Pressable,
-} from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useMemo, type ComponentProps } from "react";
+import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
-import * as LocalAuthentication from "expo-local-authentication";
-import * as SecureStore from "expo-secure-store";
 
 import { AvatarUsuario } from "@/componentes/AvatarUsuario";
 import { EstadoVacio } from "@/componentes/EstadoVacio";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { roles } from "@/constantes/roles";
 import { useSesion } from "@/contextos/Sesion";
-import {
-    guardarTokenBiometrico,
-    recuperarToken,
-} from "@/servicios/sesion";
 
 export default function Perfil() {
     const router = useRouter();
-    const { usuario, actualizarUsuario } = useSesion();
-
-    const [biometriaActiva, setBiometriaActiva] = useState(false);
-    const [errorActualizacion, setErrorActualizacion] = useState(false);
-
-    useFocusEffect(
-        useCallback(() => {
-            let activa = true;
-            actualizarUsuario()
-                .then(() => {
-                    if (activa) setErrorActualizacion(false);
-                })
-                .catch(() => {
-                    if (activa) setErrorActualizacion(true);
-                });
-
-            return () => {
-                activa = false;
-            };
-        }, [actualizarUsuario])
-    );
-
-    const activarBiometria = async () => {
-        try {
-            const disponible = await LocalAuthentication.hasHardwareAsync();
-            const registrado = await LocalAuthentication.isEnrolledAsync();
-
-            if (!disponible || !registrado) {
-                Alert.alert(
-                    "No disponible",
-                    "Tu dispositivo no tiene biometría configurada."
-                );
-                return;
-            }
-
-            const resultado = await LocalAuthentication.authenticateAsync({
-                promptMessage: "Confirmá tu identidad",
-            });
-
-            if (resultado.success && usuario) {
-                const token = await recuperarToken();
-
-                if (!token) {
-                    throw new Error("Iniciá sesión nuevamente antes de activar la biometría.");
-                }
-
-                await guardarTokenBiometrico(token);
-                await SecureStore.setItemAsync("biometria_activa", "true");
-                await SecureStore.setItemAsync(
-                    "usuario_biometrico",
-                    JSON.stringify(usuario)
-                );
-
-                setBiometriaActiva(true);
-                Alert.alert("¡Listo!", "Acceso biométrico activado.");
-            }
-        } catch (error) {
-            Alert.alert(
-                "Error",
-                error instanceof Error ? error.message : "No se pudo activar el acceso biométrico."
-            );
-        }
-    };
+    const { usuario } = useSesion();
+    const paleta = usePaleta();
+    const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
 
     if (!usuario) {
         return (
@@ -141,35 +69,6 @@ export default function Perfil() {
                         valor={usuario.telefono}
                     />
                 </View>
-
-                {usuario.rol === "jugador" && (
-                    <>
-                        <Text style={estilos.titulo}>Actividad de la cuenta</Text>
-                        <View style={estilos.cardDatos}>
-                            <Fila
-                                icono="time-outline"
-                                etiqueta="Cancelaciones tardías"
-                                valor={String(usuario.cancelacionesTardias ?? 0)}
-                            />
-                        </View>
-                        {errorActualizacion && (
-                            <Text style={estilos.avisoActualizacion}>
-                                Sin conexión: se muestra el último dato guardado.
-                            </Text>
-                        )}
-                    </>
-                )}
-
-                <Pressable
-                    style={estilos.botonBiometria}
-                    onPress={activarBiometria}
-                >
-                    <Text style={estilos.textoBoton}>
-                        {biometriaActiva
-                            ? "Acceso biométrico activado"
-                            : "Activar acceso biométrico"}
-                    </Text>
-                </Pressable>
             </ScrollView>
         </SafeAreaView>
     );
@@ -182,12 +81,15 @@ interface FilaProps {
 }
 
 function Fila({ icono, etiqueta, valor }: FilaProps) {
+    const paleta = usePaleta();
+    const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
     return (
         <View style={estilos.fila}>
             <IonIcons
                 name={icono}
                 size={20}
-                color={colores.verdePrincipal}
+                color={paleta.verdePrincipal}
             />
             <Text style={estilos.etiqueta}>{etiqueta}</Text>
             <Text style={estilos.valor}>{valor}</Text>
@@ -195,92 +97,76 @@ function Fila({ icono, etiqueta, valor }: FilaProps) {
     );
 }
 
-const estilos = StyleSheet.create({
-    contenedor: {
-        backgroundColor: colores.fondo,
-        flex: 1,
-    },
-    contenido: {
-        padding: 16,
-        paddingBottom: 16,
-    },
-    card: {
-        alignItems: "center",
-        padding: 16,
-        backgroundColor: colores.blanco,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: colores.verdeGrisaceo,
-    },
-    nombre: {
-        color: colores.textoOscuro,
-        fontSize: 20,
-        fontWeight: "bold",
-        textAlign: "center",
-        marginTop: 10,
-    },
-    chipRol: {
-        backgroundColor: colores.fondo,
-        marginTop: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 16,
-    },
-    chipTexto: {
-        color: colores.textoOscuro,
-        fontSize: 18,
-        fontWeight: "700",
-        textTransform: "uppercase",
-    },
-    titulo: {
-        color: colores.textoOscuro,
-        fontSize: 18,
-        fontWeight: "bold",
-        marginTop: 24,
-        marginBottom: 8,
-    },
-    cardDatos: {
-        backgroundColor: colores.blanco,
-        borderColor: colores.verdeGrisaceo,
-        borderWidth: 1,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-    },
-    fila: {
-        alignItems: "center",
-        flexDirection: "row",
-        paddingVertical: 12,
-        gap: 8,
-    },
-    etiqueta: {
-        color: colores.verdeGrisaceo,
-        fontSize: 16,
-        textTransform: "uppercase",
-    },
-    valor: {
-        color: colores.verdeGrisaceo,
-        fontSize: 16,
-        fontWeight: "500",
-    },
-    avisoActualizacion: {
-        color: colores.verdeGrisaceo,
-        fontSize: 13,
-        marginTop: 8,
-    },
-    separador: {
-        backgroundColor: colores.borde,
-        height: 1,
-    },
-    botonBiometria: {
-        backgroundColor: colores.verdePrincipal,
-        padding: 16,
-        borderRadius: 8,
-        alignItems: "center",
-        marginTop: 20,
-    },
-    textoBoton: {
-        color: colores.blanco,
-        fontSize: 16,
-        fontWeight: "bold",
-    },
-});
+const crearEstilos = (paleta: Paleta) =>
+    StyleSheet.create({
+        contenedor: {
+            backgroundColor: paleta.fondo,
+            flex: 1,
+        },
+        contenido: {
+            padding: 16,
+            paddingBottom: 16,
+        },
+        card: {
+            alignItems: "center",
+            padding: 16,
+            backgroundColor: paleta.superficie,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: paleta.bordeSuave,
+        },
+        nombre: {
+            color: paleta.textoOscuro,
+            fontSize: 20,
+            fontWeight: "bold",
+            textAlign: "center",
+            marginTop: 10,
+        },
+        chipRol: {
+            backgroundColor: paleta.superficieAlt,
+            marginTop: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 4,
+            borderRadius: 16,
+        },
+        chipTexto: {
+            color: paleta.textoOscuro,
+            fontSize: 18,
+            fontWeight: "700",
+            textTransform: "uppercase",
+        },
+        titulo: {
+            color: paleta.textoOscuro,
+            fontSize: 18,
+            fontWeight: "bold",
+            marginTop: 24,
+            marginBottom: 8,
+        },
+        cardDatos: {
+            backgroundColor: paleta.superficie,
+            borderColor: paleta.bordeSuave,
+            borderWidth: 1,
+            borderRadius: 16,
+            paddingHorizontal: 16,
+        },
+        fila: {
+            alignItems: "center",
+            flexDirection: "row",
+            paddingVertical: 12,
+            gap: 8,
+        },
+        etiqueta: {
+            color: paleta.verdeGrisaceo,
+            fontSize: 16,
+            textTransform: "uppercase",
+        },
+        valor: {
+            color: paleta.textoOscuro,
+            fontSize: 16,
+            fontWeight: "500",
+        },
+        separador: {
+            backgroundColor: paleta.bordeSuave,
+            height: 1,
+        },
+    });
