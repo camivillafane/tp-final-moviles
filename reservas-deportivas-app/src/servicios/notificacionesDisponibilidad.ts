@@ -1,4 +1,5 @@
 import { getDisponibilidad } from "@/servicios/disponibilidad";
+import { getEspacioById } from "@/servicios/espacios";
 import { obtenerUsuariosQueMarcaronFavoritoLocal } from "@/servicios/dbServicios";
 import {
   programarNotificacionLocal,
@@ -53,7 +54,10 @@ export async function notificarDisponibilidadEnFavorito(
   const resumenHorarios = horarios.length === 1
     ? horarios[0]
     : `${horarios.slice(0, 2).join(", ")}${horarios.length > 2 ? " y otros" : ""}`;
-  const nombreEspacio = opciones.nombreEspacio ?? "Tu espacio favorito";
+  const espacio = opciones.nombreEspacio
+    ? null
+    : await getEspacioById(opciones.espacioId).catch(() => null);
+  const nombreEspacio = opciones.nombreEspacio ?? espacio?.nombre ?? "tu espacio favorito";
   const cuerpo = `Se liberó ${horarios.length === 1 ? "el turno" : "un turno"} ${resumenHorarios} de ${nombreEspacio} para el ${fechaLegible(opciones.fecha)}. Revisá la disponibilidad.`;
 
   const identificador = await programarNotificacionLocal({
