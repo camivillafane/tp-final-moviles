@@ -81,8 +81,6 @@ export default function GestionTurnosPantalla() {
                     .map((turno) => [turno.reservaId as string, turno])
             );
 
-            // Las asistencias compartidas salen de la API. Una copia local no
-            // demuestra que la reserva ni la ausencia existan en el servidor.
             const reservasApi = agenda.reservas.filter(
                 (reserva) => reserva.origen === "api"
             );

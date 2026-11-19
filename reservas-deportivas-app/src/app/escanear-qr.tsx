@@ -229,7 +229,6 @@ if (!permiso.granted) {
                 autofocus="on"
                 barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
 
-            // PARA VER SI EL QR PERTENECE A UNA RESERVA!!!!!!!!!!!!!!!
                 onBarcodeScanned={
                     qrLeido
                     ? undefined
@@ -252,24 +251,17 @@ if (!permiso.granted) {
                             }
 
                             
-                            // if (!ingresoRegistrado){
-                            //     await vibrarResultadoQr(false);
-                            //     setResultado ("Esta reserva ya tiene un ingreso registrado.");
-                            //     return;
-                            // }
 
                             await vibrarResultadoQr(true);
                             setResultado("Ingreso autorizado.")
 
 
-                            // Obtener la fecha actual del celular
                             const ahora = new Date();
                             const anio = ahora.getFullYear();
                             const mes = String(ahora.getMonth() + 1).padStart(2, "0");
                             const dia = String(ahora.getDate()).padStart(2, "0");
                             const hoy = `${anio}-${mes}-${dia}`;
 
-                            // Validar la fecha de la reserva
                             if (reserva.fecha !== hoy) {
                             if (reserva.fecha > hoy) {
                                 setResultado(
@@ -281,28 +273,23 @@ if (!permiso.granted) {
                             return;
                             }
 
-                            // Validar si la reserva pertenece al espacio seleccionado
                             if (reserva.espacioId !== espacioSeleccionado) {
                             setResultado("Esta reserva no corresponde al espacio seleccionado.");
                             return;
                             }
 
-                            // Buscar el nombre del espacio seleccionado
                             const espacio = espacios.find(
                             (item) => item.id === espacioSeleccionado
                             );
 
-                            // Registrar el ingreso del jugador
                             const ingresoRegistrado = await registrarIngreso(reserva, usuario.id);
 
                             if (!ingresoRegistrado) {
                                 setResultado("Esta reserva ya tiene un ingreso registrado.");
                                 return;
                             }
-                                // Mostrar que la reserva es válida
                             const nombreJugador = await obtenerNombreUsuario(reserva.usuarioId);
 
-// Guardar los datos para mostrar la tarjeta
                         setDetalleIngreso({
                             nombre: nombreJugador ?? "Jugador",
                             fecha: reserva.fecha.split("-").reverse().join("/"),

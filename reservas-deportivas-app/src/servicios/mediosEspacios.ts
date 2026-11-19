@@ -66,7 +66,6 @@ function extensionDe(url: string): string {
   return punto >= 0 ? sinParametros.slice(punto) : "";
 }
 
-/** Copia el archivo al dispositivo para poder mostrarlo sin conexión. */
 async function cachearMedio(medio: MedioEspacio): Promise<string | null> {
   try {
     const carpeta = carpetaDeEspacio(medio.espacioId);
@@ -149,7 +148,6 @@ export async function guardarMedioEspacio(
   const db = await prepararTabla();
   const tipo: TipoMedio = archivo.tipo === "video" ? "video" : "imagen";
 
-  // Cada espacio tiene un solo video propio: el nuevo reemplaza al anterior.
   if (tipo === "video") {
     await borrarMediosDeTipo(espacioId, "video");
   }
@@ -211,10 +209,6 @@ export async function eliminarMedioEspacio(
   }
 }
 
-/**
- * Agrega al espacio las fotos y el video subidos desde Gestión de espacios.
- * Se prioriza la copia local para poder mostrarlos sin conexión.
- */
 export async function aplicarMediosEspacios(
   espacios: Espacio[]
 ): Promise<Espacio[]> {

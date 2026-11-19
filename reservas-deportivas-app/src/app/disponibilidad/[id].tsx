@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { BotonCta } from "@/componentes/BotonCta";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
 import { EstadoError } from "@/componentes/EstadoError";
@@ -60,7 +61,7 @@ export default function Disponibilidad() {
   if (estado === "error") return <EstadoError mensaje={error} onReintentar={() => void cargar()} />;
 
   return (
-    <View style={styles.contenedor}>
+    <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
       <ScrollView contentContainerStyle={styles.contenido}>
         <Text style={styles.titulo}>{espacio?.nombre ?? "Disponibilidad"}</Text>
@@ -106,7 +107,7 @@ export default function Disponibilidad() {
         </View>}
         {solicitud && <Text style={styles.mensajeReserva}>Turno listo para reservar: {solicitud.fecha}, {solicitud.inicio} a {solicitud.fin} - {solicitud.precio === 0 ? "Gratis" : `${solicitud.precio.toLocaleString("es-AR")}`}</Text>}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

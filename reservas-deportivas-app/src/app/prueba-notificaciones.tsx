@@ -169,8 +169,6 @@ export default function PruebaNotificacionesPantalla() {
       const identificador = await programarNotificacionLocal({
         titulo: caso.titulo,
         cuerpo: caso.cuerpo,
-        // Solo se evalúa al tocar el botón; la fecha de prueba es deliberadamente relativa al momento actual.
-        // eslint-disable-next-line react-hooks/purity
         fecha: new Date(Date.now() + 10_000),
         datos: { origen: "simulacion-caso", casoId },
       });

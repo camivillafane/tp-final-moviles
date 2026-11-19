@@ -93,7 +93,6 @@ const crearEstilos = (paleta: Paleta) =>
       textAlign: "center",
     },
     marcoQr: {
-      // El QR necesita fondo blanco para poder escanearse en ambos temas.
       backgroundColor: paleta.blanco,
       borderRadius: 16,
       padding: 18,

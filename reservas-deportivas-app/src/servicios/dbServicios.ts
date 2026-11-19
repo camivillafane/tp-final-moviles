@@ -29,7 +29,6 @@ export const inicializarBaseDeDatos = async () => {
     );
   `);
 
-  // Migración para instalaciones que ya tenían creada la tabla local.
   const columnasReserva = await db.getAllAsync<{ name: string }>(
     "PRAGMA table_info(reservas_locales);"
   );

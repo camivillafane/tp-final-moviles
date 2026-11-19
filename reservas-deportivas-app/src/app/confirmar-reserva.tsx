@@ -180,7 +180,6 @@ export default function ConfirmarReservaPantalla() {
 
           <View style={estilos.divisor} />
 
-          {/* Selector de Cantidad de Personas */}
           <Text style={estilos.etiqueta}>
             Cantidad de personas (Máx: {espacio.capacidad})
           </Text>
@@ -213,7 +212,6 @@ export default function ConfirmarReservaPantalla() {
 
           <View style={estilos.divisor} />
 
-          {/* Resumen de Precio */}
           <View style={estilos.filaPrecio}>
             <Text style={estilos.etiquetaPrecio}>Total a pagar:</Text>
             <Text style={estilos.valorPrecio}>${precioTotal.toLocaleString()}</Text>
