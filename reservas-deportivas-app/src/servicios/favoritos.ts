@@ -13,9 +13,17 @@ import {
 export async function listarFavoritos(
   usuarioId: string
 ): Promise<RespuestaLista<Espacio>> {
-  const ids = USAR_MOCKS
-    ? await obtenerFavoritosLocales(usuarioId)
-    : (await getUno<Usuario>("/yo")).espaciosFavoritos;
+  let ids: string[];
+  if (USAR_MOCKS) {
+    ids = await obtenerFavoritosLocales(usuarioId);
+  } else {
+    ids = (await getUno<Usuario>("/yo")).espaciosFavoritos;
+    const locales = await obtenerFavoritosLocales(usuarioId);
+    await Promise.all([
+      ...locales.filter((id) => !ids.includes(id)).map((id) => eliminarFavoritoLocal(usuarioId, id)),
+      ...ids.map((id) => guardarFavoritoLocal(usuarioId, id)),
+    ]);
+  }
 
   const { datos } = await listarEspacios({ porPagina: 100 });
 
@@ -43,6 +51,7 @@ export async function agregarFavorito(
   }
 
   await put<Usuario>(`/yo/espacios-favoritos/${espacioId}`);
+  await guardarFavoritoLocal(usuarioId, espacioId);
 }
 
 export async function quitarFavorito(
@@ -55,4 +64,5 @@ export async function quitarFavorito(
   }
 
   await borrar(`/yo/espacios-favoritos/${espacioId}`);
+  await eliminarFavoritoLocal(usuarioId, espacioId);
 }

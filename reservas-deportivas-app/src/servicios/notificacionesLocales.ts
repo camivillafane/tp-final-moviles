@@ -24,6 +24,7 @@ Notifications.setNotificationHandler({
 
 async function configurarCanalAndroid(): Promise<boolean> {
   if (Platform.OS !== "android" || seEjecutaEnExpoGo()) return false;
+  if (canalAndroidConfigurado) return true;
 
   try {
     await Notifications.setNotificationChannelAsync(CANAL_NOTIFICACIONES_RESERVAS, {

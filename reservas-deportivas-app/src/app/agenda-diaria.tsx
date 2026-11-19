@@ -17,8 +17,9 @@ import { usePaleta } from "@/contextos/Tema";
 import type { Paleta } from "@/constantes/colores";
 import { obtenerAgenda, type DatosAgenda } from "@/servicios/agenda";
 import { cancelarReserva } from "@/servicios/reservas";
-import { cancelarReservaLocal } from "@/servicios/dbServicios";
+import { cancelarReservaLocal, obtenerReservaLocal } from "@/servicios/dbServicios";
 import { cancelarRecordatorioReserva } from "@/servicios/notificacionesLocales";
+import { notificarDisponibilidadEnFavorito } from "@/servicios/notificacionesDisponibilidad";
 import type { Turno } from "@/tipos/turno";
 
 const fechaLocal = (fecha: Date) => {
@@ -115,8 +116,21 @@ export default function AgendaDiariaPantalla() {
           style: "destructive",
           onPress: async () => {
             try {
+              const reserva = await obtenerReservaLocal(reservaId, usuarioId);
               await cancelarReservaLocal(reservaId, usuarioId);
               await cancelarRecordatorioReserva(reservaId);
+              if (reserva) {
+                try {
+                  await notificarDisponibilidadEnFavorito({
+                    espacioId: reserva.espacioId,
+                    fecha: reserva.fecha,
+                    inicio: reserva.inicio,
+                    fin: reserva.fin,
+                  });
+                } catch (error) {
+                  console.warn("La reserva local se canceló, pero no se pudo avisar a los favoritos.", error);
+                }
+              }
               await cargar();
             } catch (fallo) {
               Alert.alert(
