@@ -17,6 +17,7 @@ import { colores } from "@/constantes/colores";
 import { obtenerAgenda, type DatosAgenda } from "@/servicios/agenda";
 import { cancelarReserva } from "@/servicios/reservas";
 import { cancelarReservaLocal } from "@/servicios/dbServicios";
+import { cancelarRecordatorioReserva } from "@/servicios/notificacionesLocales";
 import type { Turno } from "@/tipos/turno";
 
 const fechaLocal = (fecha: Date) => {
@@ -112,6 +113,7 @@ export default function AgendaDiariaPantalla() {
           onPress: async () => {
             try {
               await cancelarReservaLocal(reservaId, usuarioId);
+              await cancelarRecordatorioReserva(reservaId);
               await cargar();
             } catch (fallo) {
               Alert.alert(
