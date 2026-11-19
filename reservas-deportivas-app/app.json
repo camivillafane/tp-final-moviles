@@ -8,9 +8,15 @@
     "scheme": "reservasdeportivasapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.camivillafane.reservasdeportivas",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Usamos Face ID para verificar tu identidad antes de escanear reservas."
+      }
     },
     "android": {
+      "package": "com.camivillafane.reservasdeportivas",
       "adaptiveIcon": {
         "backgroundColor": "#e9e9eb",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -54,6 +60,28 @@
         "expo-image-picker",
         {
           "photosPermission": "La app usa tus fotos y videos para mostrarlos en la ficha de cada espacio."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "La app usa la cámara para escanear el código QR de las reservas.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Usamos Face ID para verificar tu identidad antes de escanear reservas."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],
