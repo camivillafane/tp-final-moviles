@@ -11,7 +11,7 @@ import type {
 
 const http=axios.create({
   baseURL: URL_API,
-  timeout:10000,
+  timeout:60000,
   headers:SIMULAR ? {"X-Simular": SIMULAR} : {},
 });
 

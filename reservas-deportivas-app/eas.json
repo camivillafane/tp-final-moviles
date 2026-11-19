@@ -11,7 +11,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.24:3001"
+        "EXPO_PUBLIC_API_URL": "https://api-reservas-deportivas-xo3s.onrender.com"
       }
     },
     "preview": {
@@ -20,7 +20,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.24:3001"
+        "EXPO_PUBLIC_API_URL": "https://api-reservas-deportivas-xo3s.onrender.com"
       }
     },
     "production": {
@@ -29,7 +29,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.24:3001"
+        "EXPO_PUBLIC_API_URL": "https://api-reservas-deportivas-xo3s.onrender.com"
       }
     }
   },
