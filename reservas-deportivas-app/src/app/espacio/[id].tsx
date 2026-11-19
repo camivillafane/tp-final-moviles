@@ -99,13 +99,14 @@ export default function DetalleEspacio() {
       />
 
       {(estado === "idle" || estado === "loading") && (
-        <EstadoCarga mensaje="Cargando espacio..." />
+        <EstadoCarga mensaje="Cargando espacio..." edges={[]} />
       )}
 
       {estado === "error" && (
         <EstadoError
           mensaje={error ?? "No se pudo cargar el espacio."}
           onReintentar={cargarEspacio}
+          edges={[]}
         />
       )}
 

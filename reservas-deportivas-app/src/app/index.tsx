@@ -143,11 +143,12 @@ export default function Home() {
       />
 
       {estado === "loading" && espacios.length === 0 ? (
-        <EstadoCarga mensaje="Cargando espacios..." />
+        <EstadoCarga mensaje="Cargando espacios..." edges={[]} />
       ) : estado === "error" && espacios.length === 0 ? (
         <EstadoError
           mensaje={error ?? "Ocurrió un error"}
           onReintentar={cargarEspacios}
+          edges={[]}
         />
       ) : (
         <ScrollView
@@ -168,6 +169,7 @@ export default function Home() {
             <EstadoError
               mensaje={error ?? "Ocurrió un error"}
               onReintentar={cargarEspacios}
+              edges={[]}
             />
           )}
 

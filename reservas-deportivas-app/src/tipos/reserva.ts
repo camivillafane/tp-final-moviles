@@ -14,6 +14,5 @@ export interface Reserva {
   qrToken: string;
   creadaEn: string;
   canceladaEn: string | null;
-  /** Límite ISO 8601 devuelto por la API para cancelar la reserva. */
   cancelableHasta: string | null;
 }

@@ -133,7 +133,6 @@ export default function AdministracionEspaciosPantalla() {
     try {
       setMedios(await listarMediosPorEspacio());
     } catch {
-      // Si falla la lectura se conserva lo que ya está en pantalla.
     }
   };
 
@@ -437,7 +436,7 @@ export default function AdministracionEspaciosPantalla() {
 
                 {mediosEspacio.length === 0 && (
                   <Text style={estilos.precioActual}>
-                    Todavía no agregaste fotos ni video propios.
+                    Todavía no agregaste fotos ni video.
                   </Text>
                 )}
 

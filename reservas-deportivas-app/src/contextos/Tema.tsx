@@ -50,7 +50,6 @@ export function TemaProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(paleta.fondo).catch(() => {
-      // El color de fondo del sistema es solo una mejora visual.
     });
   }, [paleta.fondo]);
 
