@@ -11,7 +11,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": " https://api-reservas-deportivas-2rgj.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://api-reservas-deportivas-2rgj.onrender.com"
       }
     },
     "preview": {
