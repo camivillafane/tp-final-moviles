@@ -101,6 +101,23 @@ export async function postLista<T>(
   }
 }
 
+// Para subir archivos (multipart/form-data) sin que el timeout corto
+// interrumpa transferencias grandes, como un video de hasta 30 MB.
+// La cabecera "Authorization: Bearer <token>" la agrega el interceptor.
+export async function postFormulario<T>(
+  url: string,
+  formulario: FormData
+): Promise<T> {
+  try {
+    const { data } = await http.post<RespuestaUno<T>>(url, formulario, {
+      timeout: 120000,
+    });
+    return data.datos;
+  } catch (error) {
+    throw traducir(error);
+  }
+}
+
 export async function put<T>(url:string): Promise<T>{
   try{
     const {data}=await http.put<RespuestaUno<T>>(url);

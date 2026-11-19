@@ -11,6 +11,7 @@ import {
   guardarCatalogo,
   obtenerCatalogo,
 } from "@/servicios/catalogoCache";
+import { aplicarMediosEspacios } from "@/servicios/mediosEspacios";
 
 interface FiltrosEspacios {
   pagina?: number;
@@ -155,10 +156,12 @@ export async function listarEspacios(
     );
   }
 
-  return paginarEspacios(filtrarEspacios(espacios, filtros), filtros);
+  const conMedios = await aplicarMediosEspacios(espacios);
+
+  return paginarEspacios(filtrarEspacios(conMedios, filtros), filtros);
 }
 
-export async function getEspacioById(
+async function obtenerEspacioBase(
   id: string
 ): Promise<Espacio | null> {
   if (USAR_MOCKS) {
@@ -241,4 +244,16 @@ export async function getEspacioById(
 
     throw error;
   }
+}
+
+export async function getEspacioById(
+  id: string
+): Promise<Espacio | null> {
+  const espacio = await obtenerEspacioBase(id);
+
+  if (!espacio) return null;
+
+  const [conMedios] = await aplicarMediosEspacios([espacio]);
+
+  return conMedios;
 }
