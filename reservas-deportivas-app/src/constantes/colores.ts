@@ -27,6 +27,8 @@ export interface Paleta {
   errorTexto: string;
   overlay: string;
   esqueleto: string;
+  estadoFijoFondo: string;
+  estadoPasadoFondo: string;
 }
 
 export const paletaClara: Paleta = {
@@ -60,6 +62,8 @@ export const paletaClara: Paleta = {
   errorTexto: "#8a2f2f",
   overlay: "rgba(0, 0, 0, 0.45)",
   esqueleto: "#d6dad8",
+  estadoFijoFondo: "#eee5f2",
+  estadoPasadoFondo: "#eceff1",
 };
 
 export const paletaOscura: Paleta = {
@@ -93,6 +97,6 @@ export const paletaOscura: Paleta = {
   errorTexto: "#f3b4b4",
   overlay: "rgba(0, 0, 0, 0.65)",
   esqueleto: "#2a342e",
+  estadoFijoFondo: "#2c2230",
+  estadoPasadoFondo: "#242c27",
 };
-
-export const colores = paletaClara;
