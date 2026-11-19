@@ -244,18 +244,6 @@ if (!permiso.granted) {
                             return;
                             }
 
-                            if (reserva.espacioId !== espacioSeleccionado){
-                                await vibrarResultadoQr(false);
-                                setResultado ("Esta reserva no corresponde al espacio seleccionado.");
-                                return;
-                            }
-
-                            
-
-                            await vibrarResultadoQr(true);
-                            setResultado("Ingreso autorizado.")
-
-
                             const ahora = new Date();
                             const anio = ahora.getFullYear();
                             const mes = String(ahora.getMonth() + 1).padStart(2, "0");
@@ -263,6 +251,7 @@ if (!permiso.granted) {
                             const hoy = `${anio}-${mes}-${dia}`;
 
                             if (reserva.fecha !== hoy) {
+                            await vibrarResultadoQr(false);
                             if (reserva.fecha > hoy) {
                                 setResultado(
                                 `La reserva todavía no corresponde. Es para el ${reserva.fecha.split("-").reverse().join("/")}.`
@@ -274,8 +263,30 @@ if (!permiso.granted) {
                             }
 
                             if (reserva.espacioId !== espacioSeleccionado) {
+                            await vibrarResultadoQr(false);
                             setResultado("Esta reserva no corresponde al espacio seleccionado.");
                             return;
+                            }
+
+                            const [horaInicio, minutoInicio] = reserva.inicio.split(":").map(Number);
+                            const [horaFin, minutoFin] = reserva.fin.split(":").map(Number);
+                            if (![horaInicio, minutoInicio, horaFin, minutoFin].every(Number.isFinite)) {
+                                await vibrarResultadoQr(false);
+                                setResultado("El horario de esta reserva no es válido.");
+                                return;
+                            }
+
+                            const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
+                            const minutosInicio = horaInicio * 60 + minutoInicio;
+                            const minutosFin = horaFin * 60 + minutoFin;
+                            if (minutosAhora < minutosInicio || minutosAhora >= minutosFin) {
+                                await vibrarResultadoQr(false);
+                                setResultado(
+                                    minutosAhora < minutosInicio
+                                        ? `El ingreso estará habilitado desde las ${reserva.inicio} hs.`
+                                        : `El horario de esta reserva terminó a las ${reserva.fin} hs.`
+                                );
+                                return;
                             }
 
                             const espacio = espacios.find(
@@ -285,9 +296,11 @@ if (!permiso.granted) {
                             const ingresoRegistrado = await registrarIngreso(reserva, usuario.id);
 
                             if (!ingresoRegistrado) {
+                                await vibrarResultadoQr(false);
                                 setResultado("Esta reserva ya tiene un ingreso registrado.");
                                 return;
                             }
+                            await vibrarResultadoQr(true);
                             const nombreJugador = await obtenerNombreUsuario(reserva.usuarioId);
 
                         setDetalleIngreso({
