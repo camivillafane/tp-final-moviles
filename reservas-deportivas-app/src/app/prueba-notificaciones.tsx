@@ -4,6 +4,8 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { colores } from "@/constantes/colores";
+import { useSesion } from "@/contextos/Sesion";
+import { registrarDispositivoPush } from "@/servicios/notificacionesPush";
 import {
   cancelarNotificacionLocal,
   cancelarRecordatorioReserva,
@@ -21,6 +23,7 @@ const CASOS_SIMULADOS = [
 
 export default function PruebaNotificacionesPantalla() {
   const router = useRouter();
+  const { usuario } = useSesion();
   const [permiso, setPermiso] = useState("Consultando permiso...");
   const [identificadorPendiente, setIdentificadorPendiente] = useState<string | null>(null);
   const [reservaPruebaId, setReservaPruebaId] = useState<string | null>(null);
@@ -205,6 +208,24 @@ export default function PruebaNotificacionesPantalla() {
     }
   };
 
+  const registrarPushEnApi = async () => {
+    setOcupado(true);
+    try {
+      const dispositivo = await registrarDispositivoPush();
+      if (!dispositivo) {
+        setPermiso("Denegado");
+        setMensaje("No se registró el dispositivo porque no se concedió el permiso.");
+        return;
+      }
+      setPermiso("Concedido");
+      setMensaje(`Dispositivo ${dispositivo.plataforma} registrado en la API para ${usuario?.email}.`);
+    } catch (error) {
+      setMensaje(error instanceof Error ? error.message : "No se pudo registrar el dispositivo en la API.");
+    } finally {
+      setOcupado(false);
+    }
+  };
+
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
@@ -217,6 +238,16 @@ export default function PruebaNotificacionesPantalla() {
         <View style={estilos.tarjeta}>
           <Text style={estilos.etiqueta}>Permiso: <Text style={estilos.valor}>{permiso}</Text></Text>
           <Text style={estilos.mensaje}>{mensaje}</Text>
+
+          <Pressable
+            style={[estilos.botonPrincipal, (!usuario || ocupado) && estilos.botonDeshabilitado]}
+            onPress={() => void registrarPushEnApi()}
+            disabled={!usuario || ocupado}
+          >
+            <Text style={estilos.textoBotonPrincipal}>
+              {!usuario ? "Iniciá sesión para registrar el dispositivo" : ocupado ? "Un momento..." : "Registrar push en la API"}
+            </Text>
+          </Pressable>
 
           <Pressable style={estilos.botonSecundario} onPress={() => void pedirPermiso()} disabled={ocupado}>
             <Text style={estilos.textoBotonSecundario}>{ocupado ? "Un momento..." : "Pedir permiso"}</Text>

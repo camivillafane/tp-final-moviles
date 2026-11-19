@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "928930134583",
+    "project_id": "tp-moviles-2026",
+    "storage_bucket": "tp-moviles-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:928930134583:android:b0ce51d5915d08ebff9db2",
+        "android_client_info": {
+          "package_name": "com.juangabriellopez.reservasdeportivasapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoaXX8xJSlU4ZChyVx0mXEOepbRblteMU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
