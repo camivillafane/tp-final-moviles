@@ -1,6 +1,6 @@
-import { useMemo, type ComponentProps } from "react";
+import { useCallback, useMemo, useState, type ComponentProps } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
 
@@ -14,9 +14,30 @@ import { useSesion } from "@/contextos/Sesion";
 
 export default function Perfil() {
     const router = useRouter();
-    const { usuario } = useSesion();
+    const { usuario, actualizarUsuario } = useSesion();
+    const usuarioId = usuario?.id;
     const paleta = usePaleta();
     const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+    const [falloAlActualizar, setFalloAlActualizar] = useState(false);
+
+    useFocusEffect(
+        useCallback(() => {
+            if (!usuarioId) return;
+
+            let activa = true;
+            actualizarUsuario()
+                .then(() => {
+                    if (activa) setFalloAlActualizar(false);
+                })
+                .catch(() => {
+                    if (activa) setFalloAlActualizar(true);
+                });
+
+            return () => {
+                activa = false;
+            };
+        }, [actualizarUsuario, usuarioId])
+    );
 
     if (!usuario) {
         return (
@@ -69,6 +90,30 @@ export default function Perfil() {
                         valor={usuario.telefono}
                     />
                 </View>
+
+                {usuario.rol === "jugador" && (
+                    <>
+                        <Text style={estilos.titulo}>Actividad de la cuenta</Text>
+                        <View style={estilos.cardDatos}>
+                            <Fila
+                                icono="time-outline"
+                                etiqueta="Cancelaciones tardías"
+                                valor={String(usuario.cancelacionesTardias ?? 0)}
+                            />
+                            <View style={estilos.separador} />
+                            <Fila
+                                icono="alert-circle-outline"
+                                etiqueta="Ausencias"
+                                valor={String(usuario.ausencias ?? 0)}
+                            />
+                        </View>
+                        {falloAlActualizar && (
+                            <Text style={estilos.avisoActualizacion}>
+                                Sin conexión: se muestra el último dato guardado.
+                            </Text>
+                        )}
+                    </>
+                )}
             </ScrollView>
         </SafeAreaView>
     );
@@ -164,6 +209,11 @@ const crearEstilos = (paleta: Paleta) =>
             color: paleta.textoOscuro,
             fontSize: 16,
             fontWeight: "500",
+        },
+        avisoActualizacion: {
+            color: paleta.verdeGrisaceo,
+            fontSize: 13,
+            marginTop: 8,
         },
         separador: {
             backgroundColor: paleta.bordeSuave,

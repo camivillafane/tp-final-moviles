@@ -1,6 +1,12 @@
 
 import { abrirBaseDeDatos } from "@/servicios/dbServicios";
+import { post } from "@/servicios/cliente";
 import type { Reserva } from "@/tipos/reserva";
+
+/** Registra una ausencia en la API, que valida el horario y actualiza al jugador. */
+export async function registrarAusenciaRemota(reservaId: string): Promise<void> {
+    await post<unknown>(`/reservas/${encodeURIComponent(reservaId)}/ausente`);
+}
 
 type BaseDeDatos = Awaited<ReturnType<typeof abrirBaseDeDatos>>;
 
