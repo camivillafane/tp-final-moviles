@@ -5,7 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CardEspacio } from "@/componentes/CardEspacio";
 import { EstadoVacio } from "@/componentes/EstadoVacio";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { useFavoritos } from "@/contextos/Favoritos";
 import { useSesion } from "@/contextos/Sesion";
 import { listarEspacios } from "@/servicios/espacios";
@@ -15,6 +16,8 @@ export default function Favoritos() {
     const router = useRouter();
     const { usuario } = useSesion();
     const { favoritos } = useFavoritos();
+    const paleta = usePaleta();
+    const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
     const [todos, setTodos] = useState<Espacio[]>([]);
 
     useEffect(() => {
@@ -68,19 +71,20 @@ export default function Favoritos() {
   );
 }
 
-const estilos = StyleSheet.create({
-    contenedor: {
-        backgroundColor: colores.fondo,
-        flex: 1,
-    },
-    contenido: {
-        padding: 16,
-        paddingBottom: 32,
-    },
-    titulo: {
-        color: colores.textoOscuro,
-        fontSize: 22,
-        fontWeight: "700",
-        marginBottom: 16,
-    },
-});
+const crearEstilos = (paleta: Paleta) =>
+    StyleSheet.create({
+        contenedor: {
+            backgroundColor: paleta.fondo,
+            flex: 1,
+        },
+        contenido: {
+            padding: 16,
+            paddingBottom: 32,
+        },
+        titulo: {
+            color: paleta.textoOscuro,
+            fontSize: 22,
+            fontWeight: "700",
+            marginBottom: 16,
+        },
+    });

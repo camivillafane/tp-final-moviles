@@ -15,7 +15,8 @@ import { EstadoCarga } from "@/componentes/EstadoCarga";
 import { EstadoError } from "@/componentes/EstadoError";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
 import { BotonCta } from "@/componentes/BotonCta";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { listarEspacios } from "@/servicios/espacios";
 import IonIcons from "@react-native-vector-icons/ionicons";
 
@@ -31,6 +32,8 @@ export default function Mapa() {
   const { espacioId } = useLocalSearchParams<{ espacioId?: string }>();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
 
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [espacioSeleccionado, setEspacioSeleccionado] = useState<Espacio | null>(null);
@@ -154,7 +157,7 @@ export default function Mapa() {
           accessibilityRole="button"
           accessibilityLabel="Centrar el mapa en mi ubicación"
         >
-          <IonIcons name="locate" size={22} color={colores.verdePrincipal} />
+          <IonIcons name="locate" size={22} color={paleta.verdePrincipal} />
         </Pressable>
         <Pressable
           style={estilos.botonControl}
@@ -162,7 +165,7 @@ export default function Mapa() {
           accessibilityRole="button"
           accessibilityLabel="Volver al centro de Villaguay"
         >
-          <IonIcons name="home" size={22} color={colores.verdePrincipal} />
+          <IonIcons name="home" size={22} color={paleta.verdePrincipal} />
         </Pressable>
       </View>
 
@@ -204,78 +207,79 @@ export default function Mapa() {
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: {
-    backgroundColor: colores.fondo,
-    flex: 1,
-  },
-  mapa: {
-    flex: 1,
-  },
-  controles: {
-    bottom: 24,
-    position: "absolute",
-    right: 16,
-    top: 16,
-  },
-  botonControl: {
-    alignItems: "center",
-    backgroundColor: colores.blanco,
-    borderColor: colores.borde,
-    borderRadius: 12,
-    borderWidth: 1,
-    elevation: 4,
-    height: 44,
-    justifyContent: "center",
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    width: 44,
-  },
-  tarjeta: {
-    backgroundColor: colores.blanco,
-    borderColor: colores.borde,
-    borderRadius: 16,
-    borderWidth: 1,
-    bottom: 24,
-    elevation: 5,
-    left: 16,
-    padding: 16,
-    position: "absolute",
-    right: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-  },
-  complejo: {
-    color: colores.verdeGrisaceo,
-    fontSize: 13,
-    textTransform: "uppercase",
-  },
-  nombre: {
-    color: colores.textoOscuro,
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  fila: {
-    marginBottom: 12,
-  },
-  precio: {
-    color: colores.verdePrincipal,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  cerrar: {
-    alignItems: "center",
-    marginTop: 12,
-  },
-  cerrarTexto: {
-    color: colores.verdeGrisaceo,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: {
+      backgroundColor: paleta.fondo,
+      flex: 1,
+    },
+    mapa: {
+      flex: 1,
+    },
+    controles: {
+      bottom: 24,
+      position: "absolute",
+      right: 16,
+      top: 16,
+    },
+    botonControl: {
+      alignItems: "center",
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.borde,
+      borderRadius: 12,
+      borderWidth: 1,
+      elevation: 4,
+      height: 44,
+      justifyContent: "center",
+      marginBottom: 8,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      width: 44,
+    },
+    tarjeta: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.borde,
+      borderRadius: 16,
+      borderWidth: 1,
+      bottom: 24,
+      elevation: 5,
+      left: 16,
+      padding: 16,
+      position: "absolute",
+      right: 16,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+    },
+    complejo: {
+      color: paleta.verdeGrisaceo,
+      fontSize: 13,
+      textTransform: "uppercase",
+    },
+    nombre: {
+      color: paleta.textoOscuro,
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    fila: {
+      marginBottom: 12,
+    },
+    precio: {
+      color: paleta.verdePrincipal,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    cerrar: {
+      alignItems: "center",
+      marginTop: 12,
+    },
+    cerrarTexto: {
+      color: paleta.verdeGrisaceo,
+      fontSize: 14,
+      fontWeight: "500",
+    },
+  });

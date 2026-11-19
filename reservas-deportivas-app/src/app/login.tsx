@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -14,12 +14,15 @@ import IonIcons from "@react-native-vector-icons/ionicons";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
 
 export default function Login() {
   const router = useRouter();
   const { iniciarSesion, iniciarSesionConUsuario } = useSesion();
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
 
   const [email, setEmail] = useState("");
   const [clave, setClave] = useState("");
@@ -99,7 +102,7 @@ export default function Login() {
         <TextInput
           style={estilos.input}
           placeholder="Correo electrónico"
-          placeholderTextColor={colores.verdeGrisaceo}
+          placeholderTextColor={paleta.verdeGrisaceo}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -110,7 +113,7 @@ export default function Login() {
           <TextInput
             style={estilos.inputClave}
             placeholder="Contraseña"
-            placeholderTextColor={colores.verdeGrisaceo}
+            placeholderTextColor={paleta.verdeGrisaceo}
             value={clave}
             onChangeText={setClave}
             secureTextEntry={!mostrarClave}
@@ -126,7 +129,7 @@ export default function Login() {
             <IonIcons
               name={mostrarClave ? "eye-off" : "eye"}
               size={22}
-              color={colores.verdeGrisaceo}
+              color={paleta.verdeGrisaceo}
             />
           </Pressable>
         </View>
@@ -147,7 +150,7 @@ export default function Login() {
           onPress={handleLoginBiometrico}
           accessibilityRole="button"
         >
-          <Text style={estilos.textoBoton}>Ingresar con huella</Text>
+          <Text style={estilos.textoBotonSecundario}>Ingresar con huella</Text>
         </Pressable>
 
         <Pressable onPress={() => router.push("/registro")}>
@@ -158,84 +161,92 @@ export default function Login() {
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: {
-    backgroundColor: colores.fondo,
-    flex: 1,
-  },
-  contenido: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: 25,
-    paddingBottom: 40,
-  },
-  titulo: {
-    color: colores.textoOscuro,
-    fontSize: 26,
-    fontWeight: "700",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  subtitulo: {
-    color: colores.verdePrincipal,
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 28,
-    textAlign: "center",
-  },
-  input: {
-    backgroundColor: colores.blanco,
-    borderColor: colores.borde,
-    borderRadius: 12,
-    borderWidth: 1,
-    color: colores.textoOscuro,
-    fontSize: 15,
-    marginBottom: 14,
-    padding: 14,
-  },
-  contenedorClave: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colores.blanco,
-    borderColor: colores.borde,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 14,
-  },
-  inputClave: {
-    color: colores.textoOscuro,
-    flex: 1,
-    fontSize: 15,
-    padding: 14,
-  },
-  botonVerClave: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  boton: {
-    alignItems: "center",
-    backgroundColor: colores.verdePrincipal,
-    borderRadius: 12,
-    marginTop: 8,
-    padding: 16,
-  },
-  botonSecundario: {
-    backgroundColor: colores.verdeSecundario,
-    marginTop: 12,
-  },
-  botonDeshabilitado: {
-    opacity: 0.6,
-  },
-  textoBoton: {
-    color: colores.blanco,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  enlace: {
-    color: colores.verdePrincipal,
-    fontSize: 14,
-    fontWeight: "600",
-    marginTop: 22,
-    textAlign: "center",
-  },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: {
+      backgroundColor: paleta.fondo,
+      flex: 1,
+    },
+    contenido: {
+      flexGrow: 1,
+      justifyContent: "center",
+      padding: 25,
+      paddingBottom: 40,
+    },
+    titulo: {
+      color: paleta.textoOscuro,
+      fontSize: 26,
+      fontWeight: "700",
+      marginBottom: 6,
+      textAlign: "center",
+    },
+    subtitulo: {
+      color: paleta.verdePrincipal,
+      fontSize: 18,
+      fontWeight: "600",
+      marginBottom: 28,
+      textAlign: "center",
+    },
+    input: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.borde,
+      borderRadius: 12,
+      borderWidth: 1,
+      color: paleta.textoOscuro,
+      fontSize: 15,
+      marginBottom: 14,
+      padding: 14,
+    },
+    contenedorClave: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.borde,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginBottom: 14,
+    },
+    inputClave: {
+      color: paleta.textoOscuro,
+      flex: 1,
+      fontSize: 15,
+      padding: 14,
+    },
+    botonVerClave: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    boton: {
+      alignItems: "center",
+      backgroundColor: paleta.verdeBoton,
+      borderRadius: 12,
+      marginTop: 8,
+      padding: 16,
+    },
+    botonSecundario: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.verdePrincipal,
+      borderWidth: 1,
+      marginTop: 12,
+    },
+    botonDeshabilitado: {
+      opacity: 0.6,
+    },
+    textoBoton: {
+      color: paleta.textoInvertido,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    textoBotonSecundario: {
+      color: paleta.verdePrincipal,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    enlace: {
+      color: paleta.verdePrincipal,
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 22,
+      textAlign: "center",
+    },
+  });

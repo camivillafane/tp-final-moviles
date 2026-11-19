@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -11,7 +11,8 @@ import {
 import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
 import { obtenerAgenda, type ReservaAgenda } from "@/servicios/agenda";
 import { getUno } from "@/servicios/cliente";
@@ -52,6 +53,8 @@ function estadoAsistencia(estadoReserva: ReservaGestion["estado"]): string {
 export default function GestionTurnosPantalla() {
     const router = useRouter();
     const { usuario, cargando } = useSesion();
+    const paleta = usePaleta();
+    const styles = useMemo(() => crearEstilos(paleta), [paleta]);
     const [reservas, setReservas] = useState<ReservaGestion[]>([]);
     const [nombresJugadores, setNombresJugadores] = useState<Record<string, string>>({});
     const [nombresEspacios, setNombresEspacios] = useState<Record<string, string>>({});
@@ -159,7 +162,7 @@ export default function GestionTurnosPantalla() {
     if (cargando) {
         return (
             <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
-                <ActivityIndicator color={colores.verdePrincipal} />
+                <ActivityIndicator color={paleta.verdePrincipal} />
                 <Text style={styles.mensaje}>Verificando la sesión...</Text>
             </SafeAreaView>
         );
@@ -179,7 +182,7 @@ export default function GestionTurnosPantalla() {
     if (cargandoReservas) {
         return (
             <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
-                <ActivityIndicator color={colores.verdePrincipal} />
+                <ActivityIndicator color={paleta.verdePrincipal} />
                 <Text style={styles.mensaje}>Cargando reservas de hoy...</Text>
             </SafeAreaView>
         );
@@ -194,7 +197,7 @@ export default function GestionTurnosPantalla() {
                     accessibilityRole="button"
                     accessibilityLabel="Volver"
                 >
-                    <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
+                    <IonIcons name="arrow-back" size={26} color={paleta.verdePrincipal} />
                 </Pressable>
                 <Text style={styles.titulo}>Gestión de turnos</Text>
                 <Pressable
@@ -202,7 +205,7 @@ export default function GestionTurnosPantalla() {
                     accessibilityRole="button"
                     accessibilityLabel="Actualizar reservas"
                 >
-                    <IonIcons name="refresh-outline" size={24} color={colores.verdePrincipal} />
+                    <IonIcons name="refresh-outline" size={24} color={paleta.verdePrincipal} />
                 </Pressable>
             </View>
 
@@ -250,7 +253,7 @@ export default function GestionTurnosPantalla() {
                                         disabled={!habilitada || guardando}
                                         onPress={() => void marcarAusente(reserva)}
                                     >
-                                        <Text style={styles.textoBoton}>
+                                        <Text style={styles.textoBotonAusente}>
                                             {guardando
                                                 ? "Registrando..."
                                                 : habilitada
@@ -268,80 +271,89 @@ export default function GestionTurnosPantalla() {
     );
 }
 
-const styles = StyleSheet.create({
-    contenedor: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-        padding: 20,
-    },
-    encabezado: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    contenido: {
-        paddingBottom: 30,
-    },
-    volver: {
-        fontSize: 18,
-        color: "#287A55",
-        marginBottom: 24,
-    },
-    botonVolver: {
-        paddingVertical: 8,
-    },
-    titulo: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#173D2B",
-        textAlign: "center",
-    },
-    subtitulo: {
-        color: "#555555",
-        fontSize: 14,
-        marginTop: 8,
-        marginBottom: 12,
-        textAlign: "center",
-    },
-    mensaje: {
-        fontSize: 16,
-        color: "#555555",
-        textAlign: "center",
-        marginVertical: 16,
-    },
-    estadoError: {
-        alignItems: "center",
-        justifyContent: "center",
-        flex: 1,
-    },
-    botonReintentar: {
-        backgroundColor: colores.verdePrincipal,
-        paddingHorizontal: 18,
-        paddingVertical: 10,
-        borderRadius: 8,
-    },
-    tarjeta: {
-        backgroundColor: "#F1F5F2",
-        borderRadius: 12,
-        padding: 16,
-        marginTop: 16,
-        gap: 10,
-    },
-    dato: {
-        fontSize: 15,
-        color: "#173D2B",
-    },
-    botonAusente: {
-        backgroundColor: "#A33A3A",
-        padding: 12,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    botonDeshabilitado: {
-        opacity: 0.55,
-    },
-    textoBoton: {
-        color: "#FFFFFF",
-        fontWeight: "bold",
-    },
-});
+const crearEstilos = (paleta: Paleta) =>
+    StyleSheet.create({
+        contenedor: {
+            flex: 1,
+            backgroundColor: paleta.fondo,
+            padding: 20,
+        },
+        encabezado: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+        },
+        contenido: {
+            paddingBottom: 30,
+        },
+        volver: {
+            fontSize: 18,
+            color: paleta.verdePrincipal,
+            marginBottom: 24,
+        },
+        botonVolver: {
+            paddingVertical: 8,
+        },
+        titulo: {
+            fontSize: 24,
+            fontWeight: "bold",
+            color: paleta.textoOscuro,
+            textAlign: "center",
+        },
+        subtitulo: {
+            color: paleta.verdeGrisaceo,
+            fontSize: 14,
+            marginTop: 8,
+            marginBottom: 12,
+            textAlign: "center",
+        },
+        mensaje: {
+            fontSize: 16,
+            color: paleta.verdeGrisaceo,
+            textAlign: "center",
+            marginVertical: 16,
+        },
+        estadoError: {
+            alignItems: "center",
+            justifyContent: "center",
+            flex: 1,
+        },
+        botonReintentar: {
+            backgroundColor: paleta.verdeBoton,
+            paddingHorizontal: 18,
+            paddingVertical: 10,
+            borderRadius: 8,
+        },
+        tarjeta: {
+            backgroundColor: paleta.superficie,
+            borderColor: paleta.bordeSuave,
+            borderWidth: 1,
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 16,
+            gap: 10,
+        },
+        dato: {
+            fontSize: 15,
+            color: paleta.textoOscuro,
+        },
+        botonAusente: {
+            backgroundColor: paleta.errorFondo,
+            borderColor: paleta.errorTexto,
+            borderWidth: 1,
+            padding: 12,
+            borderRadius: 8,
+            alignItems: "center",
+        },
+        botonDeshabilitado: {
+            opacity: 0.55,
+        },
+        textoBoton: {
+            color: paleta.textoInvertido,
+            fontWeight: "bold",
+        },
+        textoBotonAusente: {
+            color: paleta.errorTexto,
+            fontWeight: "bold",
+        },
+    });

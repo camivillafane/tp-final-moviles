@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import {
   cancelarNotificacionLocal,
   cancelarRecordatorioReserva,
@@ -21,6 +22,8 @@ const CASOS_SIMULADOS = [
 
 export default function PruebaNotificacionesPantalla() {
   const router = useRouter();
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
   const [permiso, setPermiso] = useState("Consultando permiso...");
   const [identificadorPendiente, setIdentificadorPendiente] = useState<string | null>(null);
   const [reservaPruebaId, setReservaPruebaId] = useState<string | null>(null);
@@ -278,21 +281,53 @@ export default function PruebaNotificacionesPantalla() {
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: colores.fondo },
-  contenido: { flexGrow: 1, gap: 16, padding: 20 },
-  titulo: { color: colores.textoOscuro, fontSize: 22, fontWeight: "700" },
-  descripcion: { color: colores.verdeGrisaceo, fontSize: 15, lineHeight: 22 },
-  tarjeta: { backgroundColor: colores.blanco, borderRadius: 14, gap: 14, padding: 16 },
-  etiqueta: { color: colores.textoOscuro, fontSize: 15, fontWeight: "600" },
-  valor: { color: colores.verdePrincipal },
-  mensaje: { color: colores.verdeGrisaceo, fontSize: 14, lineHeight: 20 },
-  botonPrincipal: { alignItems: "center", backgroundColor: colores.verdePrincipal, borderRadius: 10, padding: 13 },
-  textoBotonPrincipal: { color: colores.blanco, fontSize: 15, fontWeight: "700" },
-  botonSecundario: { alignItems: "center", borderColor: colores.verdePrincipal, borderRadius: 10, borderWidth: 1, padding: 12 },
-  textoBotonSecundario: { color: colores.verdePrincipal, fontSize: 14, fontWeight: "600" },
-  botonCancelar: { alignItems: "center", backgroundColor: "#FFEBEE", borderRadius: 10, padding: 12 },
-  botonDeshabilitado: { opacity: 0.5 },
-  textoCancelar: { color: "#C62828", fontSize: 14, fontWeight: "600" },
-  ayuda: { color: colores.verdeGrisaceo, fontSize: 13, lineHeight: 19 },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: { flex: 1, backgroundColor: paleta.fondo },
+    contenido: { flexGrow: 1, gap: 16, padding: 20 },
+    titulo: { color: paleta.textoOscuro, fontSize: 22, fontWeight: "700" },
+    descripcion: { color: paleta.verdeGrisaceo, fontSize: 15, lineHeight: 22 },
+    tarjeta: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 14,
+      gap: 14,
+      padding: 16,
+    },
+    etiqueta: { color: paleta.textoOscuro, fontSize: 15, fontWeight: "600" },
+    valor: { color: paleta.verdePrincipal },
+    mensaje: { color: paleta.verdeGrisaceo, fontSize: 14, lineHeight: 20 },
+    botonPrincipal: {
+      alignItems: "center",
+      backgroundColor: paleta.verdeBoton,
+      borderRadius: 10,
+      padding: 13,
+    },
+    textoBotonPrincipal: {
+      color: paleta.textoInvertido,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    botonSecundario: {
+      alignItems: "center",
+      borderColor: paleta.verdePrincipal,
+      borderRadius: 10,
+      borderWidth: 1,
+      padding: 12,
+    },
+    textoBotonSecundario: {
+      color: paleta.verdePrincipal,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    botonCancelar: {
+      alignItems: "center",
+      backgroundColor: paleta.errorFondo,
+      borderRadius: 10,
+      padding: 12,
+    },
+    botonDeshabilitado: { opacity: 0.5 },
+    textoCancelar: { color: paleta.errorTexto, fontSize: 14, fontWeight: "600" },
+    ayuda: { color: paleta.verdeGrisaceo, fontSize: 13, lineHeight: 19 },
+  });

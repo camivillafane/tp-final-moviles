@@ -15,7 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
 import { useFocusEffect, useRouter } from "expo-router";
 
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
 import {
   crearBloqueo,
@@ -60,6 +61,8 @@ function horaDespues(fin: string, inicio: string) {
 export default function AdministracionTurnosPantalla() {
   const router = useRouter();
   const { usuario, cargando: cargandoSesion } = useSesion();
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
   const [seccion, setSeccion] = useState<Seccion>("bloqueos");
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [bloqueos, setBloqueos] = useState<Bloqueo[]>([]);
@@ -226,9 +229,9 @@ export default function AdministracionTurnosPantalla() {
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <View style={estilos.encabezado}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button"><IonIcons name="arrow-back" size={24} color={colores.verdePrincipal} /></Pressable>
+        <Pressable onPress={() => router.back()} accessibilityRole="button"><IonIcons name="arrow-back" size={24} color={paleta.verdePrincipal} /></Pressable>
         <Text style={estilos.titulo}>Administración de turnos</Text>
-        <Pressable onPress={() => void cargar()} accessibilityLabel="Actualizar" accessibilityRole="button"><IonIcons name="refresh-outline" size={23} color={colores.verdePrincipal} /></Pressable>
+        <Pressable onPress={() => void cargar()} accessibilityLabel="Actualizar" accessibilityRole="button"><IonIcons name="refresh-outline" size={23} color={paleta.verdePrincipal} /></Pressable>
       </View>
       <Text style={estilos.descripcion}>Administrá los bloqueos por fecha y las reservas que se repiten cada semana.</Text>
 
@@ -237,7 +240,7 @@ export default function AdministracionTurnosPantalla() {
         <BotonPestana activa={seccion === "fijas"} texto="Reservas fijas" onPress={() => setSeccion("fijas")} />
       </View>
 
-      {cargando ? <View style={estilos.centro}><ActivityIndicator size="large" color={colores.verdePrincipal} /><Text style={estilos.secundario}>Cargando turnos...</Text></View> : error ? (
+      {cargando ? <View style={estilos.centro}><ActivityIndicator size="large" color={paleta.verdePrincipal} /><Text style={estilos.secundario}>Cargando turnos...</Text></View> : error ? (
         <View style={estilos.centro}><Text style={estilos.error}>{error}</Text><Boton texto="Reintentar" onPress={() => void cargar()} /></View>
       ) : (
         <ScrollView contentContainerStyle={estilos.contenido} keyboardShouldPersistTaps="handled">
@@ -263,7 +266,7 @@ export default function AdministracionTurnosPantalla() {
                   <Text style={estilos.secundario}>{fechaLegible(bloqueo.fecha)} · {bloqueo.inicio && bloqueo.fin ? `${bloqueo.inicio}–${bloqueo.fin}` : "Día completo"}</Text>
                   <Text style={estilos.secundario}>{bloqueo.motivo}</Text>
                 </View>
-                <Pressable onPress={() => confirmarQuitarBloqueo(bloqueo)} accessibilityLabel="Quitar bloqueo"><IonIcons name="trash-outline" size={22} color={colores.magentaPrincipal} /></Pressable>
+                <Pressable onPress={() => confirmarQuitarBloqueo(bloqueo)} accessibilityLabel="Quitar bloqueo"><IonIcons name="trash-outline" size={22} color={paleta.magentaPrincipal} /></Pressable>
               </View>
             ))}
           </> : <>
@@ -302,8 +305,8 @@ export default function AdministracionTurnosPantalla() {
                   <Text style={estilos.secundario}>{fechaLegible(fija.desde)} – {fija.hasta ? fechaLegible(fija.hasta) : "sin fecha de fin"} · {fija.activa ? "Activa" : "Inactiva"}</Text>
                 </View>
                 {esAdministrador && <View style={estilos.accionesItem}>
-                  <Pressable onPress={() => iniciarEdicionFija(fija)} accessibilityLabel="Editar reserva fija"><IonIcons name="create-outline" size={23} color={colores.verdePrincipal} /></Pressable>
-                  {fija.activa && <Pressable onPress={() => confirmarBajaFija(fija)} accessibilityLabel="Dar de baja reserva fija"><IonIcons name="remove-circle-outline" size={23} color={colores.magentaPrincipal} /></Pressable>}
+                  <Pressable onPress={() => iniciarEdicionFija(fija)} accessibilityLabel="Editar reserva fija"><IonIcons name="create-outline" size={23} color={paleta.verdePrincipal} /></Pressable>
+                  {fija.activa && <Pressable onPress={() => confirmarBajaFija(fija)} accessibilityLabel="Dar de baja reserva fija"><IonIcons name="remove-circle-outline" size={23} color={paleta.magentaPrincipal} /></Pressable>}
                 </View>}
               </View>
             ))}
@@ -315,32 +318,40 @@ export default function AdministracionTurnosPantalla() {
 }
 
 function VistaMensaje({ mensaje, volver }: { mensaje: string; volver?: () => void }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   return <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}><View style={estilos.centro}><Text style={estilos.secundario}>{mensaje}</Text>{volver && <Boton texto="Volver" onPress={volver} />}</View></SafeAreaView>;
 }
 
 function SelectorEspacio({ espacios, valor, onChange }: { espacios: Espacio[]; valor: string; onChange: (valor: string) => void }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   return <View><Text style={estilos.etiqueta}>Espacio</Text>{espacios.length === 0 ? <Text style={estilos.error}>No hay espacios activos para administrar.</Text> : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={estilos.selector}>{espacios.map((espacio) => <Pressable key={espacio.id} onPress={() => onChange(espacio.id)} style={[estilos.chip, valor === espacio.id && estilos.chipActivo]}><Text style={[estilos.textoChip, valor === espacio.id && estilos.textoChipActivo]}>{espacio.nombre}</Text></Pressable>)}</ScrollView>}</View>;
 }
 
 function SelectorHora({ etiqueta, valor, opciones, onChange }: { etiqueta: string; valor: string; opciones: string[]; onChange: (valor: string) => void }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
   const [visible, setVisible] = useState(false);
   return <View style={estilos.selectorHoraContenedor}>
     <Text style={estilos.etiqueta}>{etiqueta}</Text>
     <Pressable style={estilos.selectorHora} onPress={() => setVisible(true)} accessibilityRole="button" accessibilityLabel={`${etiqueta}: ${valor}`}>
       <Text style={estilos.valorHora}>{valor}</Text>
-      <IonIcons name="chevron-down" size={18} color={colores.verdePrincipal} />
+      <IonIcons name="chevron-down" size={18} color={paleta.verdePrincipal} />
     </Pressable>
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setVisible(false)}>
       <Pressable style={estilos.fondoModal} onPress={() => setVisible(false)}>
         <Pressable style={estilos.modalHoras} onPress={(evento) => evento.stopPropagation()}>
           <View style={estilos.encabezadoModal}>
             <Text style={estilos.tituloModal}>Seleccionar {etiqueta.toLowerCase()}</Text>
-            <Pressable onPress={() => setVisible(false)} accessibilityLabel="Cerrar selector"><IonIcons name="close" size={24} color={colores.verdePrincipal} /></Pressable>
+            <Pressable onPress={() => setVisible(false)} accessibilityLabel="Cerrar selector"><IonIcons name="close" size={24} color={paleta.verdePrincipal} /></Pressable>
           </View>
           <ScrollView style={estilos.listaHoras}>
             {opciones.map((hora) => <Pressable key={hora} style={[estilos.opcionHora, hora === valor && estilos.opcionHoraActiva]} onPress={() => { onChange(hora); setVisible(false); }}>
               <Text style={[estilos.textoOpcionHora, hora === valor && estilos.textoOpcionHoraActiva]}>{hora}</Text>
-              {hora === valor && <IonIcons name="checkmark" size={20} color={colores.verdePrincipal} />}
+              {hora === valor && <IonIcons name="checkmark" size={20} color={paleta.verdePrincipal} />}
             </Pressable>)}
           </ScrollView>
         </Pressable>
@@ -350,6 +361,8 @@ function SelectorHora({ etiqueta, valor, opciones, onChange }: { etiqueta: strin
 }
 
 function SelectorFecha({ etiqueta, valor, onChange, opcional = false }: { etiqueta: string; valor: string; onChange: (valor: string) => void; opcional?: boolean }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
   const [visible, setVisible] = useState(false);
   const [mesVisible, setMesVisible] = useState(() => {
     const [anio, mes, dia] = (valor || fechaHoy()).split("-").map(Number);
@@ -374,7 +387,7 @@ function SelectorFecha({ etiqueta, valor, onChange, opcional = false }: { etique
     <Text style={estilos.etiqueta}>{etiqueta}</Text>
     <Pressable style={estilos.selectorFecha} onPress={abrirCalendario} accessibilityRole="button" accessibilityLabel={`${etiqueta}: ${valor ? fechaLegible(valor) : "Sin fecha de fin"}`}>
       <Text style={[estilos.valorFecha, !valor && estilos.valorFechaVacio]}>{valor ? fechaLegible(valor) : "Sin fecha de fin"}</Text>
-      <IonIcons name="calendar-outline" size={20} color={colores.verdePrincipal} />
+      <IonIcons name="calendar-outline" size={20} color={paleta.verdePrincipal} />
     </Pressable>
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setVisible(false)}>
       <Pressable style={estilos.fondoModal} onPress={() => setVisible(false)}>
@@ -382,16 +395,16 @@ function SelectorFecha({ etiqueta, valor, onChange, opcional = false }: { etique
           <View style={estilos.encabezadoModal}>
             <Text style={estilos.tituloModal}>Seleccionar fecha</Text>
             <Pressable onPress={() => setVisible(false)} accessibilityLabel="Cerrar calendario">
-              <IonIcons name="close" size={24} color={colores.verdePrincipal} />
+              <IonIcons name="close" size={24} color={paleta.verdePrincipal} />
             </Pressable>
           </View>
           <View style={estilos.navegacionMes}>
             <Pressable onPress={() => setMesVisible(new Date(anio, mes - 1, 1))} accessibilityLabel="Mes anterior" style={estilos.botonMes}>
-              <IonIcons name="chevron-back" size={21} color={colores.verdePrincipal} />
+              <IonIcons name="chevron-back" size={21} color={paleta.verdePrincipal} />
             </Pressable>
             <Text style={estilos.nombreMes}>{new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" }).format(mesVisible)}</Text>
             <Pressable onPress={() => setMesVisible(new Date(anio, mes + 1, 1))} accessibilityLabel="Mes siguiente" style={estilos.botonMes}>
-              <IonIcons name="chevron-forward" size={21} color={colores.verdePrincipal} />
+              <IonIcons name="chevron-forward" size={21} color={paleta.verdePrincipal} />
             </Pressable>
           </View>
           <View style={estilos.grillaCalendario}>
@@ -417,96 +430,306 @@ function SelectorFecha({ etiqueta, valor, onChange, opcional = false }: { etique
 }
 
 function Campo({ etiqueta, valor, onChange, placeholder, compacto = false }: { etiqueta: string; valor: string; onChange: (valor: string) => void; placeholder: string; compacto?: boolean }) {
-  return <View style={[estilos.campo, compacto && estilos.campoCompacto]}><Text style={estilos.etiqueta}>{etiqueta}</Text><TextInput value={valor} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colores.verdeGrisaceo} style={estilos.entrada} autoCapitalize="none" /></View>;
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
+  return <View style={[estilos.campo, compacto && estilos.campoCompacto]}><Text style={estilos.etiqueta}>{etiqueta}</Text><TextInput value={valor} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={paleta.verdeGrisaceo} style={estilos.entrada} autoCapitalize="none" /></View>;
 }
 
 function FilaSwitch({ etiqueta, valor, onChange }: { etiqueta: string; valor: boolean; onChange: (valor: boolean) => void }) {
-  return <View style={estilos.filaSwitch}><Text style={estilos.secundario}>{etiqueta}</Text><Switch value={valor} onValueChange={onChange} trackColor={{ true: colores.verdePrincipal }} /></View>;
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
+  return <View style={estilos.filaSwitch}><Text style={estilos.secundario}>{etiqueta}</Text><Switch value={valor} onValueChange={onChange} trackColor={{ false: paleta.borde, true: paleta.verdeBoton }} thumbColor={paleta.textoInvertido} ios_backgroundColor={paleta.borde} /></View>;
 }
 
 function BotonPestana({ activa, texto, onPress }: { activa: boolean; texto: string; onPress: () => void }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   return <Pressable onPress={onPress} style={[estilos.pestana, activa && estilos.pestanaActiva]}><Text style={[estilos.textoPestana, activa && estilos.textoPestanaActiva]}>{texto}</Text></Pressable>;
 }
 
 function Boton({ texto, onPress, deshabilitado = false }: { texto: string; onPress: () => void; deshabilitado?: boolean }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   return <Pressable onPress={onPress} disabled={deshabilitado} style={[estilos.boton, deshabilitado && estilos.botonDeshabilitado]}><Text style={estilos.textoBoton}>{texto}</Text></Pressable>;
 }
 
 function TextoVacio({ texto }: { texto: string }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   return <View style={estilos.vacio}><Text style={estilos.secundario}>{texto}</Text></View>;
 }
 
-const estilos = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: colores.fondo },
-  encabezado: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 12 },
-  titulo: { color: colores.textoOscuro, fontSize: 18, fontWeight: "700", flex: 1, textAlign: "center" },
-  descripcion: { color: colores.verdeGrisaceo, fontSize: 14, lineHeight: 20, paddingHorizontal: 20, paddingBottom: 14 },
-  pestanas: { flexDirection: "row", marginHorizontal: 18, padding: 4, borderRadius: 12, backgroundColor: colores.blanco },
-  pestana: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 9 },
-  pestanaActiva: { backgroundColor: colores.verdePrincipal },
-  textoPestana: { color: colores.verdePrincipal, fontWeight: "700" },
-  textoPestanaActiva: { color: colores.blanco },
-  contenido: { padding: 18, paddingBottom: 32, gap: 12 },
-  tarjeta: { backgroundColor: colores.blanco, borderRadius: 16, padding: 16, gap: 12 },
-  tituloTarjeta: { color: colores.textoOscuro, fontSize: 18, fontWeight: "700" },
-  ayuda: { color: colores.verdeGrisaceo, fontSize: 13, lineHeight: 18 },
-  etiqueta: { color: colores.textoOscuro, fontSize: 13, fontWeight: "600", marginBottom: 5 },
-  campo: { flex: 1 },
-  campoCompacto: { flex: 1 },
-  entrada: { minHeight: 44, borderWidth: 1, borderColor: colores.borde, borderRadius: 9, paddingHorizontal: 11, color: colores.textoOscuro, backgroundColor: colores.blanco },
-  fila: { flexDirection: "row", gap: 10 },
-  filaSwitch: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  selector: { gap: 8, paddingVertical: 3 },
-  chip: { borderWidth: 1, borderColor: colores.borde, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8 },
-  chipActivo: { backgroundColor: colores.verdePrincipal, borderColor: colores.verdePrincipal },
-  textoChip: { color: colores.textoOscuro, fontSize: 13 },
-  textoChipActivo: { color: colores.blanco, fontWeight: "700" },
-  boton: { alignItems: "center", backgroundColor: colores.verdePrincipal, borderRadius: 10, paddingVertical: 13, paddingHorizontal: 16 },
-  botonDeshabilitado: { opacity: 0.6 },
-  textoBoton: { color: colores.blanco, fontWeight: "700" },
-  seccionTitulo: { color: colores.textoOscuro, fontSize: 17, fontWeight: "700", marginTop: 6 },
-  item: { alignItems: "center", backgroundColor: colores.blanco, borderRadius: 13, flexDirection: "row", gap: 12, padding: 14 },
-  itemInactivo: { opacity: 0.65 },
-  itemTexto: { flex: 1, gap: 4 },
-  nombre: { color: colores.textoOscuro, fontSize: 15, fontWeight: "700" },
-  secundario: { color: colores.verdeGrisaceo, fontSize: 13, lineHeight: 18 },
-  vacio: { backgroundColor: colores.blanco, borderRadius: 12, padding: 16 },
-  aviso: { backgroundColor: colores.blanco, borderRadius: 12, padding: 14 },
-  centro: { alignItems: "center", flex: 1, gap: 12, justifyContent: "center", padding: 24 },
-  error: { color: colores.magentaPrincipal, fontSize: 14, textAlign: "center" },
-  dias: { flexDirection: "row", justifyContent: "space-between", gap: 4 },
-  selectorHoraContenedor: { flex: 1 },
-  selectorHora: { alignItems: "center", backgroundColor: colores.blanco, borderColor: colores.borde, borderRadius: 9, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 44, paddingHorizontal: 11 },
-  selectorFecha: { alignItems: "center", backgroundColor: colores.blanco, borderColor: colores.borde, borderRadius: 9, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 44, paddingHorizontal: 11 },
-  valorFecha: { color: colores.textoOscuro, fontSize: 15, fontWeight: "600" },
-  valorFechaVacio: { color: colores.verdeGrisaceo, fontWeight: "400" },
-  valorHora: { color: colores.textoOscuro, fontSize: 15, fontWeight: "600" },
-  fondoModal: { backgroundColor: "rgba(0, 0, 0, 0.42)", flex: 1, justifyContent: "center", padding: 24 },
-  modalHoras: { backgroundColor: colores.blanco, borderRadius: 16, maxHeight: "75%", padding: 16 },
-  modalCalendario: { backgroundColor: colores.blanco, borderRadius: 16, padding: 16 },
-  navegacionMes: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingVertical: 10 },
-  botonMes: { alignItems: "center", justifyContent: "center", minHeight: 40, width: 40 },
-  nombreMes: { color: colores.textoOscuro, fontSize: 16, fontWeight: "700", textTransform: "capitalize" },
-  grillaCalendario: { flexDirection: "row", flexWrap: "wrap" },
-  encabezadoDia: { color: colores.verdeGrisaceo, fontSize: 12, fontWeight: "700", textAlign: "center", width: "14.2857%", paddingVertical: 8 },
-  celdaDia: { alignItems: "center", justifyContent: "center", minHeight: 42, width: "14.2857%" },
-  celdaDiaActiva: { backgroundColor: colores.verdePrincipal, borderRadius: 21 },
-  textoDiaCalendario: { color: colores.textoOscuro, fontSize: 14 },
-  textoDiaCalendarioActivo: { color: colores.blanco, fontWeight: "700" },
-  botonSinFecha: { alignItems: "center", borderTopColor: colores.borde, borderTopWidth: StyleSheet.hairlineWidth, marginTop: 8, paddingTop: 12 },
-  textoSinFecha: { color: colores.verdePrincipal, fontSize: 14, fontWeight: "600" },
-  encabezadoModal: { alignItems: "center", borderBottomColor: colores.borde, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", justifyContent: "space-between", paddingBottom: 12 },
-  tituloModal: { color: colores.textoOscuro, fontSize: 17, fontWeight: "700" },
-  listaHoras: { marginTop: 6 },
-  opcionHora: { alignItems: "center", borderBottomColor: colores.borde, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", justifyContent: "space-between", minHeight: 46, paddingHorizontal: 8 },
-  opcionHoraActiva: { backgroundColor: "#e5f2e8" },
-  textoOpcionHora: { color: colores.textoOscuro, fontSize: 15 },
-  textoOpcionHoraActiva: { color: colores.verdePrincipal, fontWeight: "700" },
-  dia: { alignItems: "center", borderColor: colores.borde, borderRadius: 18, borderWidth: 1, flex: 1, paddingVertical: 9 },
-  accionesItem: { alignItems: "center", flexDirection: "row", gap: 12 },
-  cancelarEdicion: { alignItems: "center", paddingVertical: 8 },
-  textoCancelar: { color: colores.magentaPrincipal, fontWeight: "600" },
-  diaActivo: { backgroundColor: colores.verdePrincipal, borderColor: colores.verdePrincipal },
-  textoDia: { color: colores.textoOscuro, fontSize: 11 },
-  textoDiaActivo: { color: colores.blanco, fontWeight: "700" },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: { flex: 1, backgroundColor: paleta.fondo },
+    encabezado: {
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+    },
+    titulo: {
+      color: paleta.textoOscuro,
+      fontSize: 18,
+      fontWeight: "700",
+      flex: 1,
+      textAlign: "center",
+    },
+    descripcion: {
+      color: paleta.verdeGrisaceo,
+      fontSize: 14,
+      lineHeight: 20,
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+    },
+    pestanas: {
+      flexDirection: "row",
+      marginHorizontal: 18,
+      padding: 4,
+      borderRadius: 12,
+      backgroundColor: paleta.superficie,
+    },
+    pestana: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 9 },
+    pestanaActiva: { backgroundColor: paleta.verdeBoton },
+    textoPestana: { color: paleta.verdePrincipal, fontWeight: "700" },
+    textoPestanaActiva: { color: paleta.textoInvertido },
+    contenido: { padding: 18, paddingBottom: 32, gap: 12 },
+    tarjeta: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 16,
+      padding: 16,
+      gap: 12,
+    },
+    tituloTarjeta: { color: paleta.textoOscuro, fontSize: 18, fontWeight: "700" },
+    ayuda: { color: paleta.verdeGrisaceo, fontSize: 13, lineHeight: 18 },
+    etiqueta: {
+      color: paleta.textoOscuro,
+      fontSize: 13,
+      fontWeight: "600",
+      marginBottom: 5,
+    },
+    campo: { flex: 1 },
+    campoCompacto: { flex: 1 },
+    entrada: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: paleta.borde,
+      borderRadius: 9,
+      paddingHorizontal: 11,
+      color: paleta.textoOscuro,
+      backgroundColor: paleta.superficie,
+    },
+    fila: { flexDirection: "row", gap: 10 },
+    filaSwitch: {
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    selector: { gap: 8, paddingVertical: 3 },
+    chip: {
+      borderWidth: 1,
+      borderColor: paleta.borde,
+      borderRadius: 20,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    chipActivo: {
+      backgroundColor: paleta.verdeBoton,
+      borderColor: paleta.verdeBoton,
+    },
+    textoChip: { color: paleta.textoOscuro, fontSize: 13 },
+    textoChipActivo: { color: paleta.textoInvertido, fontWeight: "700" },
+    boton: {
+      alignItems: "center",
+      backgroundColor: paleta.verdeBoton,
+      borderRadius: 10,
+      paddingVertical: 13,
+      paddingHorizontal: 16,
+    },
+    botonDeshabilitado: { opacity: 0.6 },
+    textoBoton: { color: paleta.textoInvertido, fontWeight: "700" },
+    seccionTitulo: {
+      color: paleta.textoOscuro,
+      fontSize: 17,
+      fontWeight: "700",
+      marginTop: 6,
+    },
+    item: {
+      alignItems: "center",
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 13,
+      flexDirection: "row",
+      gap: 12,
+      padding: 14,
+    },
+    itemInactivo: { opacity: 0.65 },
+    itemTexto: { flex: 1, gap: 4 },
+    nombre: { color: paleta.textoOscuro, fontSize: 15, fontWeight: "700" },
+    secundario: { color: paleta.verdeGrisaceo, fontSize: 13, lineHeight: 18 },
+    vacio: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 16,
+    },
+    aviso: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 14,
+    },
+    centro: {
+      alignItems: "center",
+      flex: 1,
+      gap: 12,
+      justifyContent: "center",
+      padding: 24,
+    },
+    error: { color: paleta.magentaPrincipal, fontSize: 14, textAlign: "center" },
+    dias: { flexDirection: "row", justifyContent: "space-between", gap: 4 },
+    selectorHoraContenedor: { flex: 1 },
+    selectorHora: {
+      alignItems: "center",
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.borde,
+      borderRadius: 9,
+      borderWidth: 1,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      minHeight: 44,
+      paddingHorizontal: 11,
+    },
+    selectorFecha: {
+      alignItems: "center",
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.borde,
+      borderRadius: 9,
+      borderWidth: 1,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      minHeight: 44,
+      paddingHorizontal: 11,
+    },
+    valorFecha: { color: paleta.textoOscuro, fontSize: 15, fontWeight: "600" },
+    valorFechaVacio: { color: paleta.verdeGrisaceo, fontWeight: "400" },
+    valorHora: { color: paleta.textoOscuro, fontSize: 15, fontWeight: "600" },
+    fondoModal: {
+      backgroundColor: paleta.overlay,
+      flex: 1,
+      justifyContent: "center",
+      padding: 24,
+    },
+    modalHoras: {
+      backgroundColor: paleta.superficie,
+      borderRadius: 16,
+      maxHeight: "75%",
+      padding: 16,
+    },
+    modalCalendario: {
+      backgroundColor: paleta.superficie,
+      borderRadius: 16,
+      padding: 16,
+    },
+    navegacionMes: {
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 10,
+    },
+    botonMes: {
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 40,
+      width: 40,
+    },
+    nombreMes: {
+      color: paleta.textoOscuro,
+      fontSize: 16,
+      fontWeight: "700",
+      textTransform: "capitalize",
+    },
+    grillaCalendario: { flexDirection: "row", flexWrap: "wrap" },
+    encabezadoDia: {
+      color: paleta.verdeGrisaceo,
+      fontSize: 12,
+      fontWeight: "700",
+      textAlign: "center",
+      width: "14.2857%",
+      paddingVertical: 8,
+    },
+    celdaDia: {
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 42,
+      width: "14.2857%",
+    },
+    celdaDiaActiva: { backgroundColor: paleta.verdeBoton, borderRadius: 21 },
+    textoDiaCalendario: { color: paleta.textoOscuro, fontSize: 14 },
+    textoDiaCalendarioActivo: { color: paleta.textoInvertido, fontWeight: "700" },
+    botonSinFecha: {
+      alignItems: "center",
+      borderTopColor: paleta.borde,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      marginTop: 8,
+      paddingTop: 12,
+    },
+    textoSinFecha: {
+      color: paleta.verdePrincipal,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    encabezadoModal: {
+      alignItems: "center",
+      borderBottomColor: paleta.borde,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingBottom: 12,
+    },
+    tituloModal: { color: paleta.textoOscuro, fontSize: 17, fontWeight: "700" },
+    listaHoras: { marginTop: 6 },
+    opcionHora: {
+      alignItems: "center",
+      borderBottomColor: paleta.borde,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      minHeight: 46,
+      paddingHorizontal: 8,
+    },
+    opcionHoraActiva: { backgroundColor: paleta.exitoFondo },
+    textoOpcionHora: { color: paleta.textoOscuro, fontSize: 15 },
+    textoOpcionHoraActiva: {
+      color: paleta.verdePrincipal,
+      fontWeight: "700",
+    },
+    dia: {
+      alignItems: "center",
+      borderColor: paleta.borde,
+      borderRadius: 18,
+      borderWidth: 1,
+      flex: 1,
+      paddingVertical: 9,
+    },
+    accionesItem: { alignItems: "center", flexDirection: "row", gap: 12 },
+    cancelarEdicion: { alignItems: "center", paddingVertical: 8 },
+    textoCancelar: { color: paleta.magentaPrincipal, fontWeight: "600" },
+    diaActivo: {
+      backgroundColor: paleta.verdeBoton,
+      borderColor: paleta.verdeBoton,
+    },
+    textoDia: { color: paleta.textoOscuro, fontSize: 11 },
+    textoDiaActivo: { color: paleta.textoInvertido, fontWeight: "700" },
+  });
