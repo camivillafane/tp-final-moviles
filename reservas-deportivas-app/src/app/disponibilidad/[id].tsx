@@ -1,24 +1,34 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { BotonCta } from "@/componentes/BotonCta";
 import { EstadoCarga } from "@/componentes/EstadoCarga";
 import { EstadoError } from "@/componentes/EstadoError";
 import { EstadoVacio } from "@/componentes/EstadoVacio";
 import { HeaderInstitucional } from "@/componentes/HeaderInstitucional";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
 import { getDisponibilidad, getProximosSieteDias, prepararSolicitudReserva } from "@/servicios/disponibilidad";
 import { Espacio } from "@/tipos/espacio";
 import { TurnoSeleccionado, Turno } from "@/tipos/turno";
 
 const fechaLegible = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
-const etiquetas: Record<Turno["estado"], string> = { libre: "Libre", reservado: "Reservado", fijo: "Fijo", mantenimiento: "Mantenimiento" };
-const coloresEstado: Record<Turno["estado"], string> = { libre: "#e5f2e8", reservado: "#f3e1e1", fijo: "#eee5f2", mantenimiento: "#f4ecd9" };
+const etiquetas: Record<Turno["estado"], string> = { libre: "Libre", reservado: "Reservado", fijo: "Fijo", mantenimiento: "Bloqueado" };
+const fondoEstado = (estado: Turno["estado"], paleta: Paleta) =>
+  ({
+    libre: paleta.exitoFondo,
+    reservado: paleta.badgeInactivoFondo,
+    fijo: paleta.estadoFijoFondo,
+    mantenimiento: paleta.errorFondo,
+  })[estado];
 
 export default function Disponibilidad() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const paleta = usePaleta();
+  const styles = useMemo(() => crearEstilos(paleta), [paleta]);
   const fechas = useMemo(() => getProximosSieteDias(), []);
   const [espacio, setEspacio] = useState<Espacio | null>(null);
   const [fecha, setFecha] = useState(fechas[0]);
@@ -27,6 +37,12 @@ export default function Disponibilidad() {
   const [solicitud, setSolicitud] = useState<TurnoSeleccionado | null>(null);
   const [estado, setEstado] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState("No se pudo cargar la disponibilidad.");
+  const [ahora, setAhora] = useState(() => new Date());
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 30_000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   const cargar = useCallback(async () => {
     if (!id) { setError("Falta indicar el espacio."); setEstado("error"); return; }
@@ -45,7 +61,7 @@ export default function Disponibilidad() {
   if (estado === "error") return <EstadoError mensaje={error} onReintentar={() => void cargar()} />;
 
   return (
-    <View style={styles.contenedor}>
+    <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
       <HeaderInstitucional mostrarVolver onVolverPress={() => router.back()} />
       <ScrollView contentContainerStyle={styles.contenido}>
         <Text style={styles.titulo}>{espacio?.nombre ?? "Disponibilidad"}</Text>
@@ -60,14 +76,15 @@ export default function Disponibilidad() {
           {turnos.map((turno) => {
             const reservable = prepararSolicitudReserva(turno) !== null;
             const activo = seleccion?.id === turno.id;
-            return <Pressable key={turno.id} disabled={!reservable} onPress={() => { setSeleccion(turno); setSolicitud(null); }} style={[styles.bloque, { backgroundColor: coloresEstado[turno.estado] }, activo && styles.bloqueActivo, !reservable && styles.bloqueDeshabilitado]}>
-              <Text style={styles.hora}>{turno.inicio}</Text><Text style={styles.estado}>{turno.estado === "libre" && !reservable ? "Pasado" : etiquetas[turno.estado]}</Text>
-              {turno.motivoBloqueo ? <Text style={styles.motivo}>{turno.motivoBloqueo}</Text> : null}
+            const esPasado = terminoTurno(fecha, turno.fin, ahora);
+            return <Pressable key={turno.id} disabled={!reservable} onPress={() => { setSeleccion(turno); setSolicitud(null); }} style={[styles.bloque, { backgroundColor: fondoEstado(turno.estado, paleta) }, esPasado && styles.bloquePasado, activo && styles.bloqueActivo, !reservable && styles.bloqueDeshabilitado]}>
+              <Text style={styles.hora}>{turno.inicio}</Text><Text style={styles.estado}>{esPasado ? `Pasado · ${etiquetas[turno.estado]}` : etiquetas[turno.estado]}</Text>
+              {turno.motivoBloqueo ? <Text style={styles.motivo}>Motivo: {turno.motivoBloqueo}</Text> : null}
             </Pressable>;
           })}
         </View>}
         {seleccion && <View style={styles.confirmacion}>
-          <Text style={styles.seleccionTexto}>Seleccionaste {seleccion.inicio}�{seleccion.fin}</Text>
+          <Text style={styles.seleccionTexto}>Seleccionaste {seleccion.inicio} a {seleccion.fin}</Text>
             <BotonCta
               titulo="Continuar"
               onPress={() => {
@@ -77,6 +94,7 @@ export default function Disponibilidad() {
                 router.push({
                   pathname: "/confirmar-reserva",
                   params: {
+                    turnoId: datos.turnoId,
                     espacioId: datos.espacioId,
                     fecha: datos.fecha,
                     inicio: datos.inicio,
@@ -88,13 +106,73 @@ export default function Disponibilidad() {
             />
         </View>}
         {solicitud && <Text style={styles.mensajeReserva}>Turno listo para reservar: {solicitud.fecha}, {solicitud.inicio} a {solicitud.fin} - {solicitud.precio === 0 ? "Gratis" : `${solicitud.precio.toLocaleString("es-AR")}`}</Text>}
-        <View style={styles.leyenda}>{(["libre", "reservado", "fijo", "mantenimiento"] as const).map((estadoTurno) => <Text key={estadoTurno} style={styles.leyendaTexto}>- {etiquetas[estadoTurno]}</Text>)}</View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({ contenedor: { flex: 1, backgroundColor: colores.fondo }, contenido: { padding: 16, paddingBottom: 36 }, titulo: { color: colores.textoOscuro, fontSize: 22, fontWeight: "700" }, subtitulo: { color: colores.verdeGrisaceo, marginTop: 5 }, fechas: { gap: 8, paddingVertical: 18 }, fecha: { backgroundColor: colores.blanco, borderColor: colores.borde, borderRadius: 12, borderWidth: 1, padding: 12 }, fechaActiva: { backgroundColor: colores.verdePrincipal, borderColor: colores.verdePrincipal }, fechaTexto: { color: colores.textoOscuro, textTransform: "capitalize" }, fechaTextoActiva: { color: colores.blanco, fontWeight: "700" }, seccion: { color: colores.textoOscuro, fontSize: 17, fontWeight: "700", marginBottom: 12 }, grilla: { flexDirection: "row", flexWrap: "wrap", gap: 8 }, bloque: { borderColor: colores.borde, borderRadius: 10, borderWidth: 1, minHeight: 74, justifyContent: "center", padding: 10, width: "31%" }, bloqueActivo: { borderColor: colores.magentaPrincipal, borderWidth: 2 }, bloqueDeshabilitado: { opacity: 0.72 }, hora: { color: colores.textoOscuro, fontSize: 16, fontWeight: "700" }, estado: { color: colores.textoOscuro, fontSize: 12, marginTop: 3 }, motivo: { color: colores.verdeGrisaceo, fontSize: 10, marginTop: 3 }, confirmacion: { gap: 12, marginTop: 20 }, seleccionTexto: { color: colores.textoOscuro, fontWeight: "600" }, mensajeReserva: { color: colores.verdePrincipal, fontWeight: "600", marginTop: 12 }, leyenda: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 24 }, leyendaTexto: { color: colores.textoOscuro, fontSize: 12 } });
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: { flex: 1, backgroundColor: paleta.fondo },
+    contenido: { padding: 16, paddingBottom: 36 },
+    titulo: { color: paleta.textoOscuro, fontSize: 22, fontWeight: "700" },
+    subtitulo: { color: paleta.verdeGrisaceo, marginTop: 5 },
+    fechas: { gap: 8, paddingVertical: 18 },
+    fecha: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.borde,
+      borderRadius: 12,
+      borderWidth: 1,
+      padding: 12,
+    },
+    fechaActiva: {
+      backgroundColor: paleta.verdeBoton,
+      borderColor: paleta.verdeBoton,
+    },
+    fechaTexto: { color: paleta.textoOscuro, textTransform: "capitalize" },
+    fechaTextoActiva: { color: paleta.textoInvertido, fontWeight: "700" },
+    seccion: {
+      color: paleta.textoOscuro,
+      fontSize: 17,
+      fontWeight: "700",
+      marginBottom: 12,
+    },
+    grilla: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    bloque: {
+      borderColor: paleta.borde,
+      borderRadius: 10,
+      borderWidth: 1,
+      minHeight: 74,
+      justifyContent: "center",
+      padding: 10,
+      width: "31%",
+    },
+    bloquePasado: {
+      backgroundColor: paleta.estadoPasadoFondo,
+      borderColor: paleta.bordeSuave,
+    },
+    bloqueActivo: { borderColor: paleta.magentaPrincipal, borderWidth: 2 },
+    bloqueDeshabilitado: { opacity: 0.72 },
+    hora: { color: paleta.textoOscuro, fontSize: 16, fontWeight: "700" },
+    estado: { color: paleta.textoOscuro, fontSize: 12, marginTop: 3 },
+    motivo: { color: paleta.verdeGrisaceo, fontSize: 10, marginTop: 3 },
+    confirmacion: { gap: 12, marginTop: 20 },
+    seleccionTexto: { color: paleta.textoOscuro, fontWeight: "600" },
+    mensajeReserva: {
+      color: paleta.verdePrincipal,
+      fontWeight: "600",
+      marginTop: 12,
+    },
+    leyenda: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 24 },
+    leyendaTexto: { color: paleta.textoOscuro, fontSize: 12 },
+  });
+
+function terminoTurno(fecha: string, horaFin: string, ahora: Date): boolean {
+  const [anio, mes, dia] = fecha.split("-").map(Number);
+  const [hora, minuto] = horaFin.split(":").map(Number);
+  if (![anio, mes, dia, hora, minuto].every(Number.isFinite)) return false;
+  return new Date(anio, mes - 1, dia, hora, minuto).getTime() <= ahora.getTime();
+}
 
 
 

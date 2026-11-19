@@ -30,6 +30,7 @@ export interface DiaBloqueado {
 }
 
 export interface TurnoSeleccionado {
+  turnoId: string;
   espacioId: string;
   fecha: string;
   inicio: string;

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { SIMULAR, URL_API } from "./config";
 import { ErrorServicio } from "./errores";
+import { recuperarToken } from "./sesion";
 import type {
   CodigoError,
   RespuestaError,
@@ -14,11 +15,25 @@ const http=axios.create({
   headers:SIMULAR ? {"X-Simular": SIMULAR} : {},
 });
 
+if (__DEV__) {
+  console.log("Base URL de la API:", URL_API ?? "NO CONFIGURADA");
+}
+
+http.interceptors.request.use(async (config) => {
+  const token = await recuperarToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
 
 function traducir(error: unknown): ErrorServicio {
   if (error instanceof ErrorServicio) return error;
 
   if (axios.isAxiosError(error)) {
+    
     const cuerpo = error.response?.data;
 
     if (cuerpo && typeof cuerpo === "object" && "error" in cuerpo) {
@@ -73,7 +88,6 @@ export async function post<T>(url:string,cuerpo?:unknown):Promise<T>{
   }
 }
 
-// Para endpoints que devuelven una lista, como POST /bloqueos.
 export async function postLista<T>(
   url: string,
   cuerpo?: unknown
@@ -86,11 +100,34 @@ export async function postLista<T>(
   }
 }
 
+export async function postFormulario<T>(
+  url: string,
+  formulario: FormData
+): Promise<T> {
+  try {
+    const { data } = await http.post<RespuestaUno<T>>(url, formulario, {
+      timeout: 120000,
+    });
+    return data.datos;
+  } catch (error) {
+    throw traducir(error);
+  }
+}
+
 export async function put<T>(url:string): Promise<T>{
   try{
     const {data}=await http.put<RespuestaUno<T>>(url);
     return data.datos;
   } catch (error){
+    throw traducir(error);
+  }
+}
+
+export async function patch<T>(url: string, cuerpo: unknown): Promise<T> {
+  try {
+    const { data } = await http.patch<RespuestaUno<T>>(url, cuerpo);
+    return data.datos;
+  } catch (error) {
     throw traducir(error);
   }
 }

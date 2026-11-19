@@ -24,13 +24,3 @@ export const usuarioEncargado: Usuario = {
 
 export const sesionMock: Usuario | null = usuarioJugador;
 
-//export const sesionMock: Usuario | null = {
-  //id: "usr-105",
-  //nombre: "Usuario de prueba",
-  //email: "prueba@mail.com",
-  //telefono: "3455-000000",
-  //rol: "jugador",
-  //espaciosFavoritos: [],
-  //cancelacionesTardias: 0,
-  //ausencias: 0,
-//};

@@ -17,8 +17,8 @@ export const videosEspacio: Record<string, string> = {
     require("../../assets/espacios/videos/espacio-voley-cancha.mp4")
   ),
 
-  "espacio-05": local(
-    require("../../assets/espacios/videos/espacio-pileta.mp4")
+  "espacio-06": local(
+    require("../../assets/espacios/videos/espacio-gimnasio.mp4")
   ),
 
   "espacio-07": local(
@@ -33,11 +33,15 @@ export const videosEspacio: Record<string, string> = {
     require("../../assets/espacios/videos/espacio-tenis-cancha2.mp4")
   ),
 
-  "espacio-10": local(
-    require("../../assets/espacios/videos/espacio-padel.mp4")
+  "espacio-12": local(
+    require("../../assets/espacios/videos/espacio-basquet-cancha.mp4")
   ),
 
-  "espacio-11": local(
-    require("../../assets/espacios/videos/espacio-atletismo.mp4")
+  "espacio-13": local(
+    require("../../assets/espacios/videos/espacio-basquet-cancha.mp4")
+  ),
+
+  "espacio-14": local(
+    require("../../assets/espacios/videos/espacio-voley-cancha.mp4")
   ),
 };

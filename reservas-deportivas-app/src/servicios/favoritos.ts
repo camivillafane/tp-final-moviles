@@ -1,20 +1,32 @@
 import type { Espacio } from "@/tipos/espacio";
 import type { RespuestaLista } from "@/tipos/api";
 import type { Usuario } from "@/tipos/usuario";
-import { sesionMock } from "@/mocks/sesionUsuario";
 import { USAR_MOCKS } from "./config";
 import { borrar, getUno, put } from "./cliente";
-import { respuestaMock } from "./mock";
 import { listarEspacios } from "./espacios";
+import {
+  obtenerFavoritosLocales,
+  guardarFavoritoLocal,
+  eliminarFavoritoLocal,
+} from "@/servicios/dbServicios";
 
-export async function listarFavoritos(): Promise<RespuestaLista<Espacio>> {
-  const ids = USAR_MOCKS
-    ? sesionMock?.espaciosFavoritos ?? []
-    : (await getUno<Usuario>("/yo")).espaciosFavoritos;
+export async function listarFavoritos(
+  usuarioId: string
+): Promise<RespuestaLista<Espacio>> {
+  let ids: string[];
+  if (USAR_MOCKS) {
+    ids = await obtenerFavoritosLocales(usuarioId);
+  } else {
+    ids = (await getUno<Usuario>("/yo")).espaciosFavoritos;
+    const locales = await obtenerFavoritosLocales(usuarioId);
+    await Promise.all([
+      ...locales.filter((id) => !ids.includes(id)).map((id) => eliminarFavoritoLocal(usuarioId, id)),
+      ...ids.map((id) => guardarFavoritoLocal(usuarioId, id)),
+    ]);
+  }
 
   const { datos } = await listarEspacios({ porPagina: 100 });
 
-  // Recorremos los ids para respetar el orden en que los agregó el usuario.
   const favoritos = ids
     .map((id) => datos.find((espacio) => espacio.id === id))
     .filter((espacio): espacio is Espacio => espacio !== undefined);
@@ -29,30 +41,28 @@ export async function listarFavoritos(): Promise<RespuestaLista<Espacio>> {
   };
 }
 
-export async function agregarFavorito(espacioId: string): Promise<void> {
-  if (!USAR_MOCKS) {
-    await put<Usuario>(`/yo/espacios-favoritos/${espacioId}`);
+export async function agregarFavorito(
+  usuarioId: string,
+  espacioId: string
+): Promise<void> {
+  if (USAR_MOCKS) {
+    await guardarFavoritoLocal(usuarioId, espacioId);
     return;
   }
 
-  if (sesionMock && !sesionMock.espaciosFavoritos.includes(espacioId)) {
-    sesionMock.espaciosFavoritos.push(espacioId);
-  }
-
-  await respuestaMock(null);
+  await put<Usuario>(`/yo/espacios-favoritos/${espacioId}`);
+  await guardarFavoritoLocal(usuarioId, espacioId);
 }
 
-export async function quitarFavorito(espacioId: string): Promise<void> {
-  if (!USAR_MOCKS) {
-    await borrar(`/yo/espacios-favoritos/${espacioId}`);
+export async function quitarFavorito(
+  usuarioId: string,
+  espacioId: string
+): Promise<void> {
+  if (USAR_MOCKS) {
+    await eliminarFavoritoLocal(usuarioId, espacioId);
     return;
   }
 
-  if (sesionMock) {
-    sesionMock.espaciosFavoritos = sesionMock.espaciosFavoritos.filter(
-      (id) => id !== espacioId
-    );
-  }
-
-  await respuestaMock(null);
+  await borrar(`/yo/espacios-favoritos/${espacioId}`);
+  await eliminarFavoritoLocal(usuarioId, espacioId);
 }

@@ -1,4 +1,4 @@
-export type Rol = "jugador" | "encargado";
+export type Rol = "jugador" | "encargado" | "administrador";
 
 export interface Usuario {
  id: string;

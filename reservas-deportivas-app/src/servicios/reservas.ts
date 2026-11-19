@@ -1,16 +1,119 @@
 import type { Reserva } from "@/tipos/reserva";
+import type { Espacio } from "@/tipos/espacio";
 import type { SolicitudReserva, Turno } from "@/tipos/turno";
-import { reservasEjemplo } from "@/mocks/reservas";
 import {
   reservasMock,
   reservasFijasMock,
   diasBloqueadosMock,
 } from "@/mocks/disponibilidad";
 import { espaciosMock } from "@/mocks/espacios";
-import { sesionMock } from "@/mocks/sesionUsuario"; 
+import { USAR_MOCKS } from "@/servicios/config";
+import { getLista, getUno, post } from "@/servicios/cliente";
+import { ErrorServicio } from "@/servicios/errores";
+import { cancelarRecordatorioReserva } from "@/servicios/notificacionesLocales";
+import { notificarDisponibilidadEnFavorito } from "@/servicios/notificacionesDisponibilidad";
+import {
+  contarReservasActivasLocales,
+  guardarReservaLocal,
+  obtenerReservasLocales,
+  obtenerReservaLocal,
+  obtenerTodasLasReservasLocales,
+  cancelarReservaLocal,
+} from "@/servicios/dbServicios";
+import { estaSinConexion } from "@/servicios/conexion";
+
+interface ReservaApi {
+  id: string;
+  turnoId: string;
+  espacioId: string;
+  usuarioId: string;
+  cantidadPersonas: number;
+  codigoQr: string;
+  estado: Reserva["estado"];
+  ingresoEn: string | null;
+  creadaEn: string;
+  cancelableHasta: string;
+  fecha?: string;
+  inicio?: string;
+  fin?: string;
+  precioPorHora?: number;
+}
+
+type ContextoReserva = Pick<Reserva, "usuarioId"> &
+  Partial<
+    Pick<
+      Reserva,
+      | "espacioId"
+      | "fecha"
+      | "inicio"
+      | "fin"
+      | "cantidadPersonas"
+      | "precioPorHora"
+      | "cancelableHasta"
+    >
+  > & { turnoId?: string };
+
+function datosTurnoDesdeId(turnoId: string): {
+  espacioId: string;
+  fecha: string;
+  inicio: string;
+  fin: string;
+} | null {
+  const partes = /^tur-(esp-[A-Za-z0-9_-]+)-(\d{4})(\d{2})(\d{2})-(\d{2})$/.exec(turnoId);
+  if (!partes) return null;
+
+  const [, espacioId, anio, mes, dia, hora] = partes;
+  const horaFin = Number(hora) + 1;
+  return {
+    espacioId,
+    fecha: `${anio}-${mes}-${dia}`,
+    inicio: `${hora}:00`,
+    fin: `${String(horaFin).padStart(2, "0")}:00`,
+  };
+}
+
+function normalizarReservaApi(
+  datos: ReservaApi,
+  contexto: ContextoReserva,
+  anterior?: Reserva
+): Reserva {
+  const turno = datosTurnoDesdeId(datos.turnoId);
+  const espacioId = datos.espacioId || contexto.espacioId || turno?.espacioId || "";
+  const fecha = datos.fecha ?? contexto.fecha ?? turno?.fecha ?? "";
+  const inicio = datos.inicio ?? contexto.inicio ?? turno?.inicio ?? "";
+  const fin = datos.fin ?? contexto.fin ?? turno?.fin ?? "";
+  const precioPorHora =
+    datos.precioPorHora ?? contexto.precioPorHora ?? anterior?.precioPorHora ?? 0;
+  const duracionHoras = calcularDuracion(
+    inicio || "00:00",
+    fin || "00:00"
+  );
+
+  return {
+    id: datos.id,
+    usuarioId: datos.usuarioId || contexto.usuarioId,
+    espacioId,
+    fecha,
+    inicio,
+    fin,
+    cantidadPersonas: datos.cantidadPersonas ?? contexto.cantidadPersonas ?? 1,
+    precioPorHora,
+    precioTotal:
+      anterior?.precioTotal && anterior.precioTotal > 0
+        ? anterior.precioTotal
+        : precioPorHora * duracionHoras,
+    estado: datos.estado,
+    qrToken: datos.codigoQr,
+    creadaEn: datos.creadaEn || anterior?.creadaEn || new Date().toISOString(),
+    canceladaEn:
+      datos.estado === "cancelada"
+        ? anterior?.canceladaEn ?? new Date().toISOString()
+        : null,
+    cancelableHasta: datos.cancelableHasta || anterior?.cancelableHasta || null,
+  };
+}
 
 
-// --- FUNCIONES AUXILIARES DE SOPORTE ---
 
 const generarId = (): string => {
   return `res-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -39,21 +142,48 @@ const calcularDuracion = (inicio: string, fin: string): number => {
   return (minutosTotalesFin - minutosTotalesInicio) / 60;
 };
 
-// --- 1. CREAR RESERVA ---
 
-export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
-  // 1. Validar sesión iniciada
-  if (!sesionMock) {
+export const crearReserva = async (
+  solicitud: SolicitudReserva,
+  usuarioId: string
+): Promise<Reserva> => {
+
+
+  if (!usuarioId) {
     throw new Error("Debés iniciar sesión para reservar.");
   }
 
-  // 2. Buscar el espacio solicitado
+  if (!USAR_MOCKS) {
+    if (!solicitud.turnoId) {
+      throw new Error("No se identificó el turno seleccionado.");
+    }
+    if (!Number.isInteger(solicitud.cantidadPersonas) || solicitud.cantidadPersonas < 1) {
+      throw new Error("La cantidad de personas no es válida.");
+    }
+
+    const respuesta = await post<ReservaApi>("/reservas", {
+      turnoId: solicitud.turnoId,
+      cantidadPersonas: solicitud.cantidadPersonas,
+    });
+    return normalizarReservaApi(respuesta, {
+      usuarioId,
+      turnoId: solicitud.turnoId,
+      espacioId: solicitud.espacioId,
+      fecha: solicitud.fecha,
+      inicio: solicitud.inicio,
+      fin: solicitud.fin,
+      cantidadPersonas: solicitud.cantidadPersonas,
+      precioPorHora: solicitud.precio,
+    });
+  }
+
+
   const espacio = espaciosMock.find((item) => item.id === solicitud.espacioId);
   if (!espacio || !espacio.activo) {
     throw new Error("El espacio no existe o no está disponible.");
   }
 
-  // 3. Validar cantidad de personas vs capacidad
+
   if (
     !Number.isInteger(solicitud.cantidadPersonas) ||
     solicitud.cantidadPersonas < 1 ||
@@ -64,13 +194,13 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     );
   }
 
-  // 4. Validar horario y duración
+
   const duracion = calcularDuracion(solicitud.inicio, solicitud.fin);
   if (!Number.isFinite(duracion) || duracion <= 0) {
     throw new Error("El horario seleccionado no es válido.");
   }
 
-  // 5. Validar que el día no esté bloqueado (mantenimiento/lluvia)
+
   const diaBloqueado = diasBloqueadosMock.some(
     (dia) =>
       dia.espacioId === solicitud.espacioId && dia.fecha === solicitud.fecha
@@ -79,12 +209,19 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     throw new Error("El espacio está bloqueado para esa fecha.");
   }
 
-  // 6. Validar superposición con turnos ocupados
-  const turnoOcupado = reservasMock.some(
+
+  const reservasLocales = await obtenerTodasLasReservasLocales();
+  const reservasLocalesPorId = new Map(
+    reservasLocales.map((reserva) => [reserva.id, reserva])
+  );
+
+  const turnoMockOcupado = reservasMock.some(
     (turno) =>
       turno.espacioId === solicitud.espacioId &&
       turno.fecha === solicitud.fecha &&
       turno.estado !== "libre" &&
+      (!turno.reservaId ||
+        reservasLocalesPorId.get(turno.reservaId)?.estado !== "cancelada") &&
       horariosSeSuperponen(
         solicitud.inicio,
         solicitud.fin,
@@ -92,11 +229,25 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
         turno.fin
       )
   );
-  if (turnoOcupado) {
+
+  const turnoLocalOcupado = reservasLocales.some(
+    (reserva) =>
+      reserva.estado === "confirmada" &&
+      reserva.espacioId === solicitud.espacioId &&
+      reserva.fecha === solicitud.fecha &&
+      horariosSeSuperponen(
+        solicitud.inicio,
+        solicitud.fin,
+        reserva.inicio,
+        reserva.fin
+      )
+  );
+
+  if (turnoMockOcupado || turnoLocalOcupado) {
     throw new Error("El horario seleccionado ya está ocupado.");
   }
 
-  // 7. Validar reservas fijas institucionales
+
   const fechaSeleccionada = new Date(`${solicitud.fecha}T12:00:00`);
   const diaSemana = fechaSeleccionada.getDay();
 
@@ -121,23 +272,26 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     throw new Error("El horario coincide con una reserva fija.");
   }
 
-  // 8. Validar máximo de 3 reservas activas por usuario
-  if (
-    reservasEjemplo.filter(
-      (reserva) =>
-        reserva.usuarioId === sesionMock!.id && reserva.estado === "confirmada"
-    ).length >= 3
-  ) {
-    throw new Error("No podés tener más de 3 reservas activas.");
+
+  const cantidadReservasActivas =
+  await contarReservasActivasLocales(usuarioId);
+
+if (cantidadReservasActivas >= 3) {
+  throw new Error("No podés tener más de 3 reservas activas.");
+}
+
+
+  if (!Number.isInteger(solicitud.precio) || solicitud.precio < 0) {
+    throw new Error("El precio por hora no es válido.");
   }
-  // 9. Calcular precio total de forma segura
-  const precioPorHora = espacio.precioPorHora;
+
+  const precioPorHora = solicitud.precio;
   const precioTotal = precioPorHora * duracion;
 
-  // 10. Construir el objeto de la nueva reserva
+
   const nuevaReserva: Reserva = {
     id: generarId(),
-    usuarioId: sesionMock!.id,
+    usuarioId,
     espacioId: espacio.id,
     fecha: solicitud.fecha,
     inicio: solicitud.inicio,
@@ -149,12 +303,12 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     qrToken: generarQrToken(),
     creadaEn: new Date().toISOString(),
     canceladaEn: null,
+    cancelableHasta: new Date(
+      new Date(`${solicitud.fecha}T${solicitud.inicio}:00`).getTime() - 4 * 60 * 60 * 1000
+    ).toISOString(),
   };
 
-  // 11. Guardar en el arreglo de reservas
-  reservasEjemplo.push(nuevaReserva);
 
-  // 12. Registrar el turno como ocupado en la disponibilidad
   const nuevoTurno: Turno = {
     id: `turno-${nuevaReserva.id}`,
     espacioId: espacio.id,
@@ -164,37 +318,226 @@ export const crearReserva = (solicitud: SolicitudReserva): Reserva => {
     estado: "reservado",
     reservaId: nuevaReserva.id,
     motivoBloqueo: null,
-    precio: precioTotal,
+    precio: precioPorHora,
   };
   reservasMock.push(nuevoTurno);
 
   return nuevaReserva;
 };
 
-// --- 2. CANCELAR RESERVA ---
 
-export const cancelarReserva = (reservaId: string): Reserva => {
-  const reserva = reservasEjemplo.find((item) => item.id === reservaId);
+export async function listarMisReservas(usuarioId: string): Promise<Reserva[]> {
+  if (!usuarioId) return [];
 
-  if (!reserva) {
-    throw new Error("No se encontró la reserva especificada.");
+  if (USAR_MOCKS) {
+    return obtenerReservasLocales(usuarioId);
   }
 
-  if (reserva.estado === "cancelada") {
-    throw new Error("La reserva ya se encuentra cancelada.");
+  if (await estaSinConexion()) {
+    return obtenerReservasLocales(usuarioId);
   }
 
-  reserva.estado = "cancelada";
-  reserva.canceladaEn = new Date().toISOString();
+  try {
+    const [proximas, pasadas, espaciosRespuesta] = await Promise.all([
+      getLista<ReservaApi>("/yo/reservas", {
+        cuando: "proximas",
+        pagina: 1,
+        porPagina: 100,
+      }),
+      getLista<ReservaApi>("/yo/reservas", {
+        cuando: "pasadas",
+        pagina: 1,
+        porPagina: 100,
+      }),
+      getLista<Espacio>("/espacios", {
+        pagina: 1,
+        porPagina: 100,
+      }).catch(() => null),
+    ]);
 
-  const turnoIndex = reservasMock.findIndex(
-    (turno) => turno.reservaId === reservaId
+    const preciosPorEspacio = new Map(
+      (espaciosRespuesta?.datos ?? []).map((espacio) => [
+        espacio.id,
+        espacio.precioPorHora,
+      ])
+    );
+
+    const reservasLocales = await obtenerReservasLocales(usuarioId);
+
+    const reservasLocalesPorId = new Map(
+      reservasLocales.map((reserva) => [reserva.id, reserva])
+    );
+
+    const reservas = [...proximas.datos, ...pasadas.datos].map((reserva) => {
+      const local = reservasLocalesPorId.get(reserva.id);
+      const precioLocal = local?.precioPorHora;
+
+      return normalizarReservaApi(
+        reserva,
+        {
+          usuarioId: reserva.usuarioId || usuarioId,
+          turnoId: reserva.turnoId,
+          espacioId: reserva.espacioId ?? local?.espacioId,
+          fecha: reserva.fecha ?? local?.fecha,
+          inicio: reserva.inicio ?? local?.inicio,
+          fin: reserva.fin ?? local?.fin,
+          cantidadPersonas: reserva.cantidadPersonas,
+          precioPorHora:
+            reserva.precioPorHora ??
+            (precioLocal && precioLocal > 0
+              ? precioLocal
+              : preciosPorEspacio.get(reserva.espacioId)),
+        },
+        local
+      );
+    });
+
+    await Promise.all(
+      reservas.map((reserva) => guardarReservaLocal(reserva))
+    );
+
+    const idsDevueltosPorApi = new Set(
+      reservas.map((reserva) => reserva.id)
+    );
+
+    const confirmadasLocalesPendientes = reservasLocales.filter(
+      (reserva) =>
+        reserva.estado === "confirmada" &&
+        !idsDevueltosPorApi.has(reserva.id)
+    );
+
+    return [...reservas, ...confirmadasLocalesPendientes];
+  } catch (error) {
+    if (error instanceof ErrorServicio && error.codigo === "ERROR_RED") {
+      return obtenerReservasLocales(usuarioId);
+    }
+
+    throw error;
+  }
+}
+
+export async function obtenerDetalleReserva(
+  reservaId: string,
+  usuarioId: string
+): Promise<Reserva | null> {
+  if (!reservaId || !usuarioId) return null;
+
+  const reservaAnterior = await obtenerReservaLocal(
+    reservaId,
+    usuarioId
   );
 
-  if (turnoIndex !== -1) {
-    reservasMock[turnoIndex].estado = "libre";
-    reservasMock[turnoIndex].reservaId = null;
+  if (USAR_MOCKS) {
+    return reservaAnterior;
   }
 
+  if (await estaSinConexion()) {
+    return reservaAnterior;
+  }
+
+  try {
+    const datos = await getUno<ReservaApi>(
+      `/reservas/${encodeURIComponent(reservaId)}`
+    );
+
+    const precioEspacio =
+      reservaAnterior?.precioPorHora &&
+      reservaAnterior.precioPorHora > 0
+        ? reservaAnterior.precioPorHora
+        : (
+            await getUno<Espacio>(
+              `/espacios/${datos.espacioId}`
+            ).catch(() => null)
+          )?.precioPorHora;
+
+    const reserva = normalizarReservaApi(
+      datos,
+      {
+        usuarioId,
+        turnoId: datos.turnoId,
+        espacioId: reservaAnterior?.espacioId ?? datos.espacioId,
+        fecha: reservaAnterior?.fecha || datos.fecha,
+        inicio: reservaAnterior?.inicio || datos.inicio,
+        fin: reservaAnterior?.fin || datos.fin,
+        cantidadPersonas: datos.cantidadPersonas,
+        precioPorHora: datos.precioPorHora ?? precioEspacio,
+      },
+      reservaAnterior ?? undefined
+    );
+
+    await guardarReservaLocal(reserva);
+
+    return reserva;
+  } catch (error) {
+    if (
+      error instanceof ErrorServicio &&
+      error.codigo === "ERROR_RED"
+    ) {
+      return reservaAnterior;
+    }
+
+    throw error;
+  }
+}
+
+export async function cancelarReserva(
+  reservaId: string,
+  usuarioId: string
+): Promise<Reserva> {
+  const reservaAnterior = await obtenerReservaLocal(reservaId, usuarioId);
+  if (reservaAnterior?.cancelableHasta) {
+    const limite = Date.parse(reservaAnterior.cancelableHasta);
+    if (Number.isFinite(limite) && Date.now() > limite) {
+      throw new Error("Ya pasó el plazo para cancelar online. Avisale al encargado del espacio para registrar la cancelación tardía.");
+    }
+  }
+
+  if (!USAR_MOCKS) {
+    const datos = await post<ReservaApi>(
+      `/reservas/${encodeURIComponent(reservaId)}/cancelacion`
+    );
+    const reserva = await normalizarReservaApi(
+      datos,
+      {
+        usuarioId,
+        turnoId: datos.turnoId,
+        espacioId: reservaAnterior?.espacioId ?? datos.espacioId,
+        fecha: reservaAnterior?.fecha ?? datos.fecha,
+        inicio: reservaAnterior?.inicio ?? datos.inicio,
+        fin: reservaAnterior?.fin ?? datos.fin,
+        cantidadPersonas: reservaAnterior?.cantidadPersonas ?? datos.cantidadPersonas,
+        precioPorHora: reservaAnterior?.precioPorHora ?? datos.precioPorHora,
+      },
+      reservaAnterior ?? undefined
+    );
+    await guardarReservaLocal(reserva);
+    await cancelarRecordatorioReserva(reservaId);
+    try {
+      await notificarDisponibilidadEnFavorito({
+        espacioId: reserva.espacioId,
+        fecha: reserva.fecha,
+        inicio: reserva.inicio,
+        fin: reserva.fin,
+      });
+    } catch (error) {
+      console.warn("La reserva se canceló, pero no se pudo avisar a los favoritos.", error);
+    }
+    return reserva;
+  }
+
+  await cancelarReservaLocal(reservaId, usuarioId);
+  const reserva = await obtenerReservaLocal(reservaId, usuarioId);
+  if (!reserva) throw new Error("No se encontró la reserva especificada.");
+  await cancelarRecordatorioReserva(reservaId);
+  try {
+    await notificarDisponibilidadEnFavorito({
+      espacioId: reserva.espacioId,
+      fecha: reserva.fecha,
+      inicio: reserva.inicio,
+      fin: reserva.fin,
+    });
+  } catch (error) {
+    console.warn("La reserva local se canceló, pero no se pudo avisar a los favoritos.", error);
+  }
   return reserva;
 };

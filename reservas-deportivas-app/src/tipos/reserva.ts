@@ -1,4 +1,4 @@
-export type EstadoReserva = "confirmada" | "cancelada";
+export type EstadoReserva = "confirmada" | "cancelada" | "cumplida" | "ausente";
 
 export interface Reserva {
   id: string;
@@ -14,4 +14,5 @@ export interface Reserva {
   qrToken: string;
   creadaEn: string;
   canceladaEn: string | null;
+  cancelableHasta: string | null;
 }
