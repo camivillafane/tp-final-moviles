@@ -59,7 +59,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "La app usa tus fotos y videos para mostrarlos en la ficha de cada espacio."
+          "photosPermission": "La app usa tus fotos y videos para mostrarlos en la ficha de cada espacio.",
+          "microphonePermission": false
         }
       ],
       [
@@ -88,6 +89,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "ec2a0e2e-eb42-44c8-b0a1-2d995b081a0f"
+      }
+    },
+    "owner": "camivillaf"
   }
 }
