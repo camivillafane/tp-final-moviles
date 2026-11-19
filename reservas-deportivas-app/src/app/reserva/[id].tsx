@@ -17,6 +17,21 @@ import { getEspacioById } from "@/servicios/espacios";
 import type { Reserva } from "@/tipos/reserva";
 import type { Espacio } from "@/tipos/espacio";
 
+function formatearFechaHoraArgentina(fechaHora: string): string {
+  const fecha = new Date(fechaHora);
+  if (!Number.isFinite(fecha.getTime())) return fechaHora;
+
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(fecha);
+}
+
 export default function DetalleReservaPantalla() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -94,7 +109,7 @@ export default function DetalleReservaPantalla() {
             <Text style={estilos.dato}>Fecha: {reserva.fecha}</Text>
             {reserva.cancelableHasta && reserva.estado === "confirmada" && (
               <Text style={estilos.dato}>
-                Podés cancelar online hasta: {new Date(reserva.cancelableHasta).toLocaleString("es-AR")}
+                Podés cancelar online hasta: {formatearFechaHoraArgentina(reserva.cancelableHasta)}
               </Text>
             )}
             <Text style={estilos.dato}>
