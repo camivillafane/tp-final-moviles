@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -12,6 +12,10 @@ import { obtenerReservaPorQrToken, obtenerNombreUsuario } from "@/servicios/dbSe
 import { listarEspacios } from "@/servicios/espacios";
 import type { Espacio } from "@/tipos/espacio";
 import { registrarIngreso } from "@/servicios/ingresos";
+import * as Haptics from "expo-haptics";
+import * as LocalAuthentication from "expo-local-authentication";
+
+
 
 export default function EscanearQrPantalla() {
 const router = useRouter();
@@ -32,6 +36,58 @@ const [espacios, setEspacios] = useState<Espacio[]>([]);
 const [espacioSeleccionado, setEspacioSeleccionado] = useState("");
 const [cargandoEspacios, setCargandoEspacios] = useState(true);
 const [mostrarEspacios, setMostrarEspacios] = useState(false);
+const [huellaVerificada, setHuellaVerificada] = useState(false);
+const [verificandoHuella, setVerificandoHuella] = useState(false);
+const autenticacionIniciada = useRef(false);
+
+const verificarHuella = async () => {
+    setVerificandoHuella(true);
+    setResultado("Verificando identidad...");
+
+    try {
+        const tieneHardware = await LocalAuthentication.hasHardwareAsync();
+        const tieneHuellaRegistrada = await LocalAuthentication.isEnrolledAsync();
+
+        if (!tieneHardware || !tieneHuellaRegistrada) {
+            setResultado("El dispositivo no tiene autenticación biométrica configurada.");
+            return;
+        }
+
+        const resultadoHuella = await LocalAuthentication.authenticateAsync({
+            promptMessage: "Verificá tu identidad para escanear reservas",
+            cancelLabel: "Cancelar",
+            disableDeviceFallback: true,
+        });
+
+        if (resultadoHuella.success) {
+            setHuellaVerificada(true);
+            setResultado("Identidad verificada. Ya podés escanear.");
+        } else {
+            setHuellaVerificada(false);
+            setResultado("No se pudo verificar la huella. Intentá nuevamente.");
+        }
+    } catch (error) {
+        console.error("Error al verificar huella:", error);
+        setResultado("No se pudo realizar la autenticación.");
+    } finally {
+        setVerificandoHuella(false);
+    }
+};
+
+useEffect(() => {
+    if (
+        cargando ||
+        !usuario ||
+        usuario.rol !== "encargado" ||
+        autenticacionIniciada.current
+    ) {
+        return;
+    }
+
+    autenticacionIniciada.current = true;
+    verificarHuella();
+}, [cargando, usuario]);
+
 
 useEffect(() => {
     listarEspacios()
@@ -61,6 +117,31 @@ if (!usuario || usuario.rol !== "encargado") {
         </SafeAreaView>
     );
 }
+
+if (!huellaVerificada) {
+    return (
+        <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+            <Text style={estilos.titulo}>Verificación de identidad</Text>
+
+            <Text style={estilos.mensaje}>
+                Necesitamos verificar tu identidad para permitirte escanear reservas.
+            </Text>
+
+            <Pressable
+                style={estilos.boton}
+                onPress={verificarHuella}
+                disabled={verificandoHuella}
+            >
+                <Text style={estilos.botonTexto}>
+                    {verificandoHuella ? "Verificando..." : "Verificar con huella"}
+                </Text>
+            </Pressable>
+
+            <Text style={estilos.pista}>{resultado}</Text>
+        </SafeAreaView>
+    );
+} 
+
 
 if (!permiso) {
     return <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]} />;
@@ -164,6 +245,23 @@ if (!permiso.granted) {
                             return;
                             }
 
+                            if (reserva.espacioId !== espacioSeleccionado){
+                                await vibrarResultadoQr(false);
+                                setResultado ("Esta reserva no corresponde al espacio seleccionado.");
+                                return;
+                            }
+
+                            
+                            // if (!ingresoRegistrado){
+                            //     await vibrarResultadoQr(false);
+                            //     setResultado ("Esta reserva ya tiene un ingreso registrado.");
+                            //     return;
+                            // }
+
+                            await vibrarResultadoQr(true);
+                            setResultado("Ingreso autorizado.")
+
+
                             // Obtener la fecha actual del celular
                             const ahora = new Date();
                             const anio = ahora.getFullYear();
@@ -259,6 +357,16 @@ if (!permiso.granted) {
         </ScrollView>
     </SafeAreaView>
     );
+}
+
+async function vibrarResultadoQr(valido: boolean) {
+    try {
+        await Haptics.notificationAsync(
+            valido
+                ? Haptics.NotificationFeedbackType.Success
+                : Haptics.NotificationFeedbackType.Error
+        );
+    } catch {}
 }
 
 const crearEstilos = (paleta: Paleta) =>
@@ -366,38 +474,38 @@ const crearEstilos = (paleta: Paleta) =>
             right: 0,
             bottom: 0,
         },
-        esquina: {
+                esquina: {
             position: "absolute",
             width: 35,
             height: 35,
             borderColor: paleta.verdePrincipal,
         },
-    esquinaSuperiorIzquierda: {
-        top: 20,
-        left: 20,
-        borderTopWidth: 4,
-        borderLeftWidth: 4,
-        borderTopLeftRadius: 8,
-    },
-    esquinaSuperiorDerecha: {
-        top: 20,
-        right: 20,
-        borderTopWidth: 4,
-        borderRightWidth: 4,
-        borderTopRightRadius: 8,
-    },
-    esquinaInferiorIzquierda: {
-        bottom: 20,
-        left: 20,
-        borderBottomWidth: 4,
-        borderLeftWidth: 4,
-        borderBottomLeftRadius: 8,
-    },
-    esquinaInferiorDerecha: {
-        bottom: 20,
-        right: 20,
-        borderBottomWidth: 4,
-        borderRightWidth: 4,
-        borderBottomRightRadius: 8,
-    },
-});
+        esquinaSuperiorIzquierda: {
+            top: 20,
+            left: 20,
+            borderTopWidth: 4,
+            borderLeftWidth: 4,
+            borderTopLeftRadius: 8,
+        },
+        esquinaSuperiorDerecha: {
+            top: 20,
+            right: 20,
+            borderTopWidth: 4,
+            borderRightWidth: 4,
+            borderTopRightRadius: 8,
+        },
+        esquinaInferiorIzquierda: {
+            bottom: 20,
+            left: 20,
+            borderBottomWidth: 4,
+            borderLeftWidth: 4,
+            borderBottomLeftRadius: 8,
+        },
+        esquinaInferiorDerecha: {
+            bottom: 20,
+            right: 20,
+            borderBottomWidth: 4,
+            borderRightWidth: 4,
+            borderBottomRightRadius: 8,
+        },
+    });
