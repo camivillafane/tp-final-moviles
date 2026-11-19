@@ -1,114 +1,169 @@
-
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    View,
-    Text,
-    StyleSheet,
+    ActivityIndicator,
+    Alert,
     Pressable,
     ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
-import { colores } from "@/constantes/colores";
-
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
-import {
-    obtenerTodasLasReservasLocales,
-    obtenerNombreUsuario,
-} from "@/servicios/dbServicios";
-import {
-    obtenerAsistenciasLocales,
-    registrarAusencia,
-} from "@/servicios/ingresos";
-import { listarEspacios } from "@/servicios/espacios";
-import type { Reserva } from "@/tipos/reserva";
+import { obtenerAgenda, type ReservaAgenda } from "@/servicios/agenda";
+import { getUno } from "@/servicios/cliente";
+import { registrarAusenciaRemota } from "@/servicios/ingresos";
+import type { Usuario } from "@/tipos/usuario";
+
+interface ReservaGestion extends ReservaAgenda {
+    fecha: string;
+    inicio: string;
+    fin: string;
+}
+
+function fechaActualLocal(): string {
+    const fecha = new Date();
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    return `${anio}-${mes}-${dia}`;
+}
+
+function puedeMarcarAusente(reserva: ReservaGestion, ahora: Date): boolean {
+    const [anio, mes, dia] = reserva.fecha.split("-").map(Number);
+    const [hora, minuto] = reserva.inicio.split(":").map(Number);
+    if (![anio, mes, dia, hora, minuto].every(Number.isFinite)) return false;
+
+    const inicio = new Date(anio, mes - 1, dia, hora, minuto);
+    const habilitadoDesde = inicio.getTime() + 15 * 60 * 1000;
+    return ahora.getTime() >= habilitadoDesde;
+}
+
+function estadoAsistencia(estadoReserva: ReservaGestion["estado"]): string {
+    if (estadoReserva === "cumplida") return "PRESENTE";
+    if (estadoReserva === "ausente") return "AUSENTE";
+    if (estadoReserva === "cancelada") return "CANCELADA";
+    return "SIN REGISTRAR";
+}
 
 export default function GestionTurnosPantalla() {
     const router = useRouter();
     const { usuario, cargando } = useSesion();
-
-    const [reservas, setReservas] = useState<Reserva[]>([]);
-    const [asistencias, setAsistencias] = useState<
-        { reservaId: string; estado: string }[]
-    >([]);
+    const paleta = usePaleta();
+    const styles = useMemo(() => crearEstilos(paleta), [paleta]);
+    const [reservas, setReservas] = useState<ReservaGestion[]>([]);
+    const [nombresJugadores, setNombresJugadores] = useState<Record<string, string>>({});
+    const [nombresEspacios, setNombresEspacios] = useState<Record<string, string>>({});
     const [cargandoReservas, setCargandoReservas] = useState(true);
-
-    const [nombresJugadores, setNombresJugadores] = useState<
-        Record<string, string>
-    >({});
-
-    const [nombresEspacios, setNombresEspacios] = useState<
-        Record<string, string>
-    >({});
+    const [errorCarga, setErrorCarga] = useState<string | null>(null);
+    const [reservaEnProceso, setReservaEnProceso] = useState<string | null>(null);
+    const [ahora, setAhora] = useState(() => new Date());
+    const [fecha] = useState(fechaActualLocal);
 
     useEffect(() => {
-        async function cargarDatos() {
-            try {
-                const reservasGuardadas =
-                    await obtenerTodasLasReservasLocales();
-
-                setReservas(reservasGuardadas);
-
-                const nombresDeJugadores: Record<string, string> = {};
-
-                for (const reserva of reservasGuardadas) {
-                    const nombre = await obtenerNombreUsuario(
-                        reserva.usuarioId
-                    );
-
-                    nombresDeJugadores[reserva.id] = nombre ?? "Jugador";
-                }
-
-                setNombresJugadores(nombresDeJugadores);
-
-                const espaciosGuardados = await listarEspacios();
-                const nombresDeEspacios: Record<string, string> = {};
-
-                for (const espacio of espaciosGuardados.datos) {
-                    nombresDeEspacios[espacio.id] = espacio.nombre;
-                }
-
-                setNombresEspacios(nombresDeEspacios);
-
-                const asistenciasGuardadas =
-                    await obtenerAsistenciasLocales();
-
-                setAsistencias(asistenciasGuardadas);
-            } catch (error) {
-                console.error("Error al cargar los turnos:", error);
-            } finally {
-                setCargandoReservas(false);
-            }
-        }
-
-        cargarDatos();
+        const intervalo = setInterval(() => setAhora(new Date()), 30_000);
+        return () => clearInterval(intervalo);
     }, []);
 
-    async function marcarAusente(reserva: Reserva) {
-        if (!usuario) return;
+    const cargarDatos = useCallback(async () => {
+        setCargandoReservas(true);
+        setErrorCarga(null);
 
         try {
-            const registrado = await registrarAusencia(
-                reserva,
-                usuario.id
+            const agenda = await obtenerAgenda(fecha);
+            const turnosPorReserva = new Map(
+                agenda.turnos
+                    .filter((turno) => turno.reservaId)
+                    .map((turno) => [turno.reservaId as string, turno])
             );
 
-            if (!registrado) return;
+            // Las asistencias compartidas salen de la API. Una copia local no
+            // demuestra que la reserva ni la ausencia existan en el servidor.
+            const reservasApi = agenda.reservas.filter(
+                (reserva) => reserva.origen === "api"
+            );
+            const reservasParaMostrar: ReservaGestion[] = reservasApi.map((reserva) => {
+                const turno = turnosPorReserva.get(reserva.id)
+                    ?? agenda.turnos.find((item) => item.id === reserva.turnoId);
+                return {
+                    ...reserva,
+                    fecha: turno?.fecha ?? fecha,
+                    inicio: turno?.inicio ?? "--:--",
+                    fin: turno?.fin ?? "--:--",
+                };
+            });
+            setReservas(reservasParaMostrar);
 
-            const asistenciasActualizadas =
-                await obtenerAsistenciasLocales();
+            const nombresEspaciosNuevos: Record<string, string> = {};
+            for (const espacio of agenda.espacios) {
+                nombresEspaciosNuevos[espacio.id] = espacio.nombre;
+            }
+            setNombresEspacios(nombresEspaciosNuevos);
 
-            setAsistencias(asistenciasActualizadas);
+            const idsJugadores = [...new Set(reservasApi.map((reserva) => reserva.usuarioId))];
+            const jugadores = await Promise.all(
+                idsJugadores.map(async (id) => {
+                    try {
+                        const jugador = await getUno<Usuario>(`/usuarios/${encodeURIComponent(id)}`);
+                        return [id, jugador.nombre] as const;
+                    } catch {
+                        return [id, "Jugador"] as const;
+                    }
+                })
+            );
+            setNombresJugadores(Object.fromEntries(jugadores));
         } catch (error) {
-            console.error("Error al registrar la ausencia:", error);
+            setErrorCarga(
+                error instanceof Error
+                    ? error.message
+                    : "No se pudieron cargar las reservas de hoy."
+            );
+        } finally {
+            setCargandoReservas(false);
         }
-    }
+    }, [fecha]);
 
-    if (cargando || cargandoReservas) {
+    useFocusEffect(
+        useCallback(() => {
+            if (!cargando && usuario?.rol === "encargado") {
+                void cargarDatos();
+            }
+        }, [cargando, usuario?.rol, cargarDatos])
+    );
+
+    const marcarAusente = async (reserva: ReservaGestion) => {
+        if (!puedeMarcarAusente(reserva, ahora)) {
+            Alert.alert(
+                "Todavía no se puede marcar",
+                "La API permite registrar la ausencia a partir de 15 minutos después del inicio del turno."
+            );
+            return;
+        }
+
+        setReservaEnProceso(reserva.id);
+        try {
+            await registrarAusenciaRemota(reserva.id);
+            await cargarDatos();
+            Alert.alert("Ausencia registrada", "La reserva se actualizó en el servidor.");
+        } catch (error) {
+            Alert.alert(
+                "No se pudo registrar la ausencia",
+                error instanceof Error ? error.message : "Intentá nuevamente."
+            );
+        } finally {
+            setReservaEnProceso(null);
+        }
+    };
+
+    if (cargando) {
         return (
             <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
-                <Text style={styles.mensaje}>Cargando turnos...</Text>
+                <ActivityIndicator color={paleta.verdePrincipal} />
+                <Text style={styles.mensaje}>Verificando la sesión...</Text>
             </SafeAreaView>
         );
     }
@@ -116,10 +171,7 @@ export default function GestionTurnosPantalla() {
     if (!usuario || usuario.rol !== "encargado") {
         return (
             <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
-                <Text style={styles.mensaje}>
-                    No tenés permiso para acceder a esta pantalla.
-                </Text>
-
+                <Text style={styles.mensaje}>No tenés permiso para acceder a esta pantalla.</Text>
                 <Pressable onPress={() => router.replace("/")}>
                     <Text style={styles.volver}>Volver</Text>
                 </Pressable>
@@ -127,134 +179,181 @@ export default function GestionTurnosPantalla() {
         );
     }
 
+    if (cargandoReservas) {
+        return (
+            <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
+                <ActivityIndicator color={paleta.verdePrincipal} />
+                <Text style={styles.mensaje}>Cargando reservas de hoy...</Text>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.contenedor} edges={["top", "bottom"]}>
-            <Pressable
-                onPress={() => router.back()}
-                style={styles.botonVolver}
-                accessibilityRole="button"
-                accessibilityLabel="Volver atrás"
-            >
-                <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
-            </Pressable>
+            <View style={styles.encabezado}>
+                <Pressable
+                    onPress={() => router.back()}
+                    style={styles.botonVolver}
+                    accessibilityRole="button"
+                    accessibilityLabel="Volver"
+                >
+                    <IonIcons name="arrow-back" size={26} color={paleta.verdePrincipal} />
+                </Pressable>
+                <Text style={styles.titulo}>Gestión de turnos</Text>
+                <Pressable
+                    onPress={() => void cargarDatos()}
+                    accessibilityRole="button"
+                    accessibilityLabel="Actualizar reservas"
+                >
+                    <IonIcons name="refresh-outline" size={24} color={paleta.verdePrincipal} />
+                </Pressable>
+            </View>
 
-            <Text style={styles.titulo}>Gestión de turnos</Text>
+            <Text style={styles.subtitulo}>Reservas de hoy · {fecha}</Text>
 
-            <ScrollView contentContainerStyle={styles.contenido}>
-                {reservas.length === 0 ? (
-                    <Text style={styles.mensaje}>
-                        No hay turnos registrados.
-                    </Text>
-                ) : (
-                    reservas.map((reserva) => {
-                        const asistencia = asistencias.find(
-                            (item) => item.reservaId === reserva.id
-                        );
+            {errorCarga ? (
+                <View style={styles.estadoError}>
+                    <Text style={styles.mensaje}>{errorCarga}</Text>
+                    <Pressable style={styles.botonReintentar} onPress={() => void cargarDatos()}>
+                        <Text style={styles.textoBoton}>Reintentar</Text>
+                    </Pressable>
+                </View>
+            ) : reservas.length === 0 ? (
+                <Text style={styles.mensaje}>No hay reservas para hoy.</Text>
+            ) : (
+                <ScrollView contentContainerStyle={styles.contenido}>
+                    {reservas.map((reserva) => {
+                        const asistencia = estadoAsistencia(reserva.estado);
+                        const habilitada = puedeMarcarAusente(reserva, ahora);
+                        const guardando = reservaEnProceso === reserva.id;
 
                         return (
-                            <View
-                                key={reserva.id}
-                                style={styles.tarjeta}
-                            >
+                            <View key={reserva.id} style={styles.tarjeta}>
                                 <Text style={styles.dato}>
-                                    Jugador:{" "}
-                                    {nombresJugadores[reserva.id] ??
-                                        "Jugador"}
+                                    Jugador: {nombresJugadores[reserva.usuarioId] ?? "Jugador"}
                                 </Text>
-
-                                <Text style={styles.dato}>
-                                    Fecha: {reserva.fecha}
-                                </Text>
-
+                                <Text style={styles.dato}>Fecha: {reserva.fecha}</Text>
                                 <Text style={styles.dato}>
                                     Horario: {reserva.inicio} - {reserva.fin}
                                 </Text>
-
                                 <Text style={styles.dato}>
-                                    Espacio:{" "}
-                                    {nombresEspacios[reserva.espacioId] ??
-                                        reserva.espacioId}
+                                    Espacio: {nombresEspacios[reserva.espacioId] ?? reserva.espacioId}
                                 </Text>
-
                                 <Text style={styles.dato}>
                                     Estado de reserva: {reserva.estado}
                                 </Text>
+                                <Text style={styles.dato}>Asistencia: {asistencia}</Text>
 
-                                <Text style={styles.dato}>
-                                    Asistencia:{" "}
-                                    {asistencia?.estado ?? "SIN REGISTRAR"}
-                                </Text>
-
-                                {!asistencia &&
-                                    reserva.estado === "confirmada" && (
-                                        <Pressable
-                                            style={styles.botonAusente}
-                                            onPress={() =>
-                                                marcarAusente(reserva)
-                                            }
-                                        >
-                                            <Text style={styles.textoBoton}>
-                                                Marcar AUSENTE
-                                            </Text>
-                                        </Pressable>
-                                    )}
+                                {reserva.estado === "confirmada" && (
+                                    <Pressable
+                                        style={[
+                                            styles.botonAusente,
+                                            (!habilitada || guardando) && styles.botonDeshabilitado,
+                                        ]}
+                                        disabled={!habilitada || guardando}
+                                        onPress={() => void marcarAusente(reserva)}
+                                    >
+                                        <Text style={styles.textoBotonAusente}>
+                                            {guardando
+                                                ? "Registrando..."
+                                                : habilitada
+                                                  ? "Marcar AUSENTE"
+                                                  : "Disponible 15 min después del inicio"}
+                                        </Text>
+                                    </Pressable>
+                                )}
                             </View>
                         );
-                    })
-                )}
-            </ScrollView>
+                    })}
+                </ScrollView>
+            )}
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    contenedor: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-        padding: 20,
-    },
-    contenido: {
-        paddingBottom: 30,
-    },
-    volver: {
-        fontSize: 18,
-        color: "#287A55",
-        marginBottom: 24,
-    },
-    botonVolver: {
-        marginBottom: 24,
-    },
-    titulo: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#173D2B",
-        textAlign: "center",
-    },
-    mensaje: {
-        fontSize: 16,
-        color: "#555555",
-        textAlign: "center",
-        marginVertical: 16,
-    },
-    tarjeta: {
-        backgroundColor: "#F1F5F2",
-        borderRadius: 12,
-        padding: 16,
-        marginTop: 16,
-        gap: 10,
-    },
-    dato: {
-        fontSize: 15,
-        color: "#173D2B",
-    },
-    botonAusente: {
-        backgroundColor: "#A33A3A",
-        padding: 12,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    textoBoton: {
-        color: "#FFFFFF",
-        fontWeight: "bold",
-    },
-});
+const crearEstilos = (paleta: Paleta) =>
+    StyleSheet.create({
+        contenedor: {
+            flex: 1,
+            backgroundColor: paleta.fondo,
+            padding: 20,
+        },
+        encabezado: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+        },
+        contenido: {
+            paddingBottom: 30,
+        },
+        volver: {
+            fontSize: 18,
+            color: paleta.verdePrincipal,
+            marginBottom: 24,
+        },
+        botonVolver: {
+            paddingVertical: 8,
+        },
+        titulo: {
+            fontSize: 24,
+            fontWeight: "bold",
+            color: paleta.textoOscuro,
+            textAlign: "center",
+        },
+        subtitulo: {
+            color: paleta.verdeGrisaceo,
+            fontSize: 14,
+            marginTop: 8,
+            marginBottom: 12,
+            textAlign: "center",
+        },
+        mensaje: {
+            fontSize: 16,
+            color: paleta.verdeGrisaceo,
+            textAlign: "center",
+            marginVertical: 16,
+        },
+        estadoError: {
+            alignItems: "center",
+            justifyContent: "center",
+            flex: 1,
+        },
+        botonReintentar: {
+            backgroundColor: paleta.verdeBoton,
+            paddingHorizontal: 18,
+            paddingVertical: 10,
+            borderRadius: 8,
+        },
+        tarjeta: {
+            backgroundColor: paleta.superficie,
+            borderColor: paleta.bordeSuave,
+            borderWidth: 1,
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 16,
+            gap: 10,
+        },
+        dato: {
+            fontSize: 15,
+            color: paleta.textoOscuro,
+        },
+        botonAusente: {
+            backgroundColor: paleta.errorFondo,
+            borderColor: paleta.errorTexto,
+            borderWidth: 1,
+            padding: 12,
+            borderRadius: 8,
+            alignItems: "center",
+        },
+        botonDeshabilitado: {
+            opacity: 0.55,
+        },
+        textoBoton: {
+            color: paleta.textoInvertido,
+            fontWeight: "bold",
+        },
+        textoBotonAusente: {
+            color: paleta.errorTexto,
+            fontWeight: "bold",
+        },
+    });

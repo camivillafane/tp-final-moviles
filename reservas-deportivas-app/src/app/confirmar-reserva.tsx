@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -11,17 +11,21 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { getEspacioById } from "@/servicios/espacios";
 import { crearReserva } from "@/servicios/reservas";
 import { guardarReservaLocal } from "@/servicios/dbServicios";
 import { useSesion } from "@/contextos/Sesion";
 import { EstadoConexion } from "@/componentes/EstadoConexion";
 import type { Espacio } from "@/tipos/espacio";
+import { programarRecordatorioReserva } from "@/servicios/notificacionesLocales";
 
 export default function ConfirmarReservaPantalla() {
   const router = useRouter();
   const { usuario } = useSesion();
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
   const params = useLocalSearchParams<{
     turnoId: string;
     espacioId: string;
@@ -121,6 +125,12 @@ export default function ConfirmarReservaPantalla() {
 
   await guardarReservaLocal(nuevaReserva);
 
+  try {
+    await programarRecordatorioReserva(nuevaReserva, espacio.nombre);
+  } catch (error) {
+    console.warn("La reserva se confirmó, pero no se pudo programar el recordatorio.", error);
+  }
+
       Alert.alert(
         "¡Reserva confirmada!",
         "Tu reserva ha sido guardada con éxito y podés acceder a tu QR sin conexión.",
@@ -151,7 +161,7 @@ export default function ConfirmarReservaPantalla() {
           <IonIcons
             name="arrow-back"
             size={26}
-            color={colores.verdePrincipal}
+            color={paleta.verdePrincipal}
           />
         </Pressable>
 
@@ -224,119 +234,123 @@ export default function ConfirmarReservaPantalla() {
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: {
-    flex: 1,
-    backgroundColor: "#F8F9FA",
-  },
-  contenedorCentrado: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  contenido: {
-    padding: 20,
-  },
-  botonVolver: {
-    marginBottom: 16,
-  },
-  titulo: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-    marginBottom: 20,
-  },
-  tarjeta: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom: 24,
-  },
-  nombreEspacio: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-  },
-  complejo: {
-    fontSize: 14,
-    color: "#666666",
-    marginTop: 4,
-  },
-  divisor: {
-    height: 1,
-    backgroundColor: "#EEEEEE",
-    marginVertical: 16,
-  },
-  etiqueta: {
-    fontSize: 13,
-    color: "#888888",
-    marginBottom: 4,
-  },
-  valor: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  selectorPersonas: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  botonContador: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#2E7D32",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  textoBotonContador: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  valorPersonas: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginHorizontal: 20,
-    color: "#1A1A1A",
-  },
-  filaPrecio: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  etiquetaPrecio: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  valorPrecio: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#2E7D32",
-  },
-  botonConfirmar: {
-    backgroundColor: "#2E7D32",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  botonDeshabilitado: {
-    opacity: 0.5,
-  },
-  textoBotonConfirmar: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  textoError: {
-    fontSize: 16,
-    color: "red",
-  },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: {
+      flex: 1,
+      backgroundColor: paleta.fondo,
+    },
+    contenedorCentrado: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: paleta.fondo,
+    },
+    contenido: {
+      padding: 20,
+    },
+    botonVolver: {
+      marginBottom: 16,
+    },
+    titulo: {
+      fontSize: 22,
+      fontWeight: "bold",
+      color: paleta.textoOscuro,
+      marginBottom: 20,
+    },
+    tarjeta: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 16,
+      padding: 20,
+      elevation: 2,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      marginBottom: 24,
+    },
+    nombreEspacio: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: paleta.textoOscuro,
+    },
+    complejo: {
+      fontSize: 14,
+      color: paleta.verdeGrisaceo,
+      marginTop: 4,
+    },
+    divisor: {
+      height: 1,
+      backgroundColor: paleta.bordeSuave,
+      marginVertical: 16,
+    },
+    etiqueta: {
+      fontSize: 13,
+      color: paleta.verdeGrisaceo,
+      marginBottom: 4,
+    },
+    valor: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: paleta.textoOscuro,
+    },
+    selectorPersonas: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 8,
+    },
+    botonContador: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      backgroundColor: paleta.verdeBoton,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    textoBotonContador: {
+      color: paleta.textoInvertido,
+      fontSize: 20,
+      fontWeight: "bold",
+    },
+    valorPersonas: {
+      fontSize: 18,
+      fontWeight: "bold",
+      marginHorizontal: 20,
+      color: paleta.textoOscuro,
+    },
+    filaPrecio: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    etiquetaPrecio: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: paleta.textoOscuro,
+    },
+    valorPrecio: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: paleta.verdePrincipal,
+    },
+    botonConfirmar: {
+      backgroundColor: paleta.verdeBoton,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: "center",
+    },
+    botonDeshabilitado: {
+      opacity: 0.5,
+    },
+    textoBotonConfirmar: {
+      color: paleta.textoInvertido,
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+    textoError: {
+      fontSize: 16,
+      color: paleta.errorTexto,
+    },
+  });

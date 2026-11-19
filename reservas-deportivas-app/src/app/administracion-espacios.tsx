@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +13,8 @@ import IonIcons from "@react-native-vector-icons/ionicons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
 import {
   cambiarPrecioEspacio,
@@ -31,6 +32,8 @@ const formatoPesos = (valor: number) =>
 export default function AdministracionEspaciosPantalla() {
   const router = useRouter();
   const { usuario, cargando: cargandoSesion } = useSesion();
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [preciosEditados, setPreciosEditados] = useState<Record<string, string>>({});
   const [cargando, setCargando] = useState(true);
@@ -111,7 +114,7 @@ export default function AdministracionEspaciosPantalla() {
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <View style={estilos.encabezado}>
         <Pressable onPress={() => router.back()} accessibilityRole="button">
-          <IonIcons name="arrow-back" size={24} color={colores.verdePrincipal} />
+          <IonIcons name="arrow-back" size={24} color={paleta.verdePrincipal} />
         </Pressable>
         <Text style={estilos.titulo}>Gestión de espacios</Text>
         <Pressable
@@ -119,7 +122,7 @@ export default function AdministracionEspaciosPantalla() {
           accessibilityRole="button"
           accessibilityLabel="Actualizar espacios"
         >
-          <IonIcons name="refresh-outline" size={23} color={colores.verdePrincipal} />
+          <IonIcons name="refresh-outline" size={23} color={paleta.verdePrincipal} />
         </Pressable>
       </View>
 
@@ -129,7 +132,7 @@ export default function AdministracionEspaciosPantalla() {
 
       {cargando ? (
         <View style={estilos.centro}>
-          <ActivityIndicator color={colores.verdePrincipal} size="large" />
+          <ActivityIndicator color={paleta.verdePrincipal} size="large" />
           <Text style={estilos.textoSecundario}>Cargando espacios...</Text>
         </View>
       ) : error ? (
@@ -182,7 +185,7 @@ export default function AdministracionEspaciosPantalla() {
                     accessibilityRole="button"
                   >
                     {guardando ? (
-                      <ActivityIndicator color={colores.blanco} />
+                      <ActivityIndicator color={paleta.textoInvertido} />
                     ) : (
                       <Text style={estilos.textoBoton}>Guardar</Text>
                     )}
@@ -201,6 +204,9 @@ export default function AdministracionEspaciosPantalla() {
 }
 
 function VistaMensaje({ mensaje, volver }: { mensaje: string; volver?: () => void }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <View style={estilos.centro}>
@@ -215,42 +221,82 @@ function VistaMensaje({ mensaje, volver }: { mensaje: string; volver?: () => voi
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: { backgroundColor: colores.fondo, flex: 1 },
-  encabezado: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-  },
-  titulo: { color: colores.textoOscuro, fontSize: 20, fontWeight: "700" },
-  descripcion: { color: colores.verdeGrisaceo, fontSize: 14, paddingHorizontal: 18, paddingBottom: 10 },
-  lista: { padding: 16, paddingBottom: 32 },
-  tarjeta: { backgroundColor: colores.blanco, borderRadius: 14, marginBottom: 14, padding: 16 },
-  nombre: { color: colores.textoOscuro, fontSize: 17, fontWeight: "700" },
-  complejo: { color: colores.verdeGrisaceo, fontSize: 13, marginTop: 3 },
-  dato: { color: colores.textoOscuro, fontSize: 13, marginTop: 10 },
-  etiquetaPrecio: { color: colores.textoOscuro, fontSize: 14, fontWeight: "600", marginTop: 16 },
-  filaPrecio: { alignItems: "center", flexDirection: "row", gap: 8, marginTop: 7 },
-  simboloPesos: { color: colores.textoOscuro, fontSize: 18, fontWeight: "700" },
-  entradaPrecio: {
-    backgroundColor: colores.fondo,
-    borderColor: colores.borde,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colores.textoOscuro,
-    flex: 1,
-    fontSize: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  botonGuardar: { alignItems: "center", backgroundColor: colores.verdePrincipal, borderRadius: 8, minWidth: 88, paddingHorizontal: 14, paddingVertical: 11 },
-  botonDeshabilitado: { opacity: 0.6 },
-  textoBoton: { color: colores.blanco, fontSize: 14, fontWeight: "700" },
-  precioActual: { color: colores.verdeGrisaceo, fontSize: 12, marginTop: 7 },
-  centro: { alignItems: "center", flex: 1, justifyContent: "center", padding: 24, gap: 12 },
-  textoSecundario: { color: colores.verdeGrisaceo, fontSize: 15, textAlign: "center" },
-  error: { color: "#9b2c2c", fontSize: 15, textAlign: "center" },
-  botonReintentar: { backgroundColor: colores.verdePrincipal, borderRadius: 8, paddingHorizontal: 18, paddingVertical: 11 },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: { backgroundColor: paleta.fondo, flex: 1 },
+    encabezado: {
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 18,
+      paddingVertical: 14,
+    },
+    titulo: { color: paleta.textoOscuro, fontSize: 20, fontWeight: "700" },
+    descripcion: {
+      color: paleta.verdeGrisaceo,
+      fontSize: 14,
+      paddingHorizontal: 18,
+      paddingBottom: 10,
+    },
+    lista: { padding: 16, paddingBottom: 32 },
+    tarjeta: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 14,
+      marginBottom: 14,
+      padding: 16,
+    },
+    nombre: { color: paleta.textoOscuro, fontSize: 17, fontWeight: "700" },
+    complejo: { color: paleta.verdeGrisaceo, fontSize: 13, marginTop: 3 },
+    dato: { color: paleta.textoOscuro, fontSize: 13, marginTop: 10 },
+    etiquetaPrecio: {
+      color: paleta.textoOscuro,
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 16,
+    },
+    filaPrecio: { alignItems: "center", flexDirection: "row", gap: 8, marginTop: 7 },
+    simboloPesos: { color: paleta.textoOscuro, fontSize: 18, fontWeight: "700" },
+    entradaPrecio: {
+      backgroundColor: paleta.superficieAlt,
+      borderColor: paleta.borde,
+      borderRadius: 8,
+      borderWidth: 1,
+      color: paleta.textoOscuro,
+      flex: 1,
+      fontSize: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+    },
+    botonGuardar: {
+      alignItems: "center",
+      backgroundColor: paleta.verdeBoton,
+      borderRadius: 8,
+      minWidth: 88,
+      paddingHorizontal: 14,
+      paddingVertical: 11,
+    },
+    botonDeshabilitado: { opacity: 0.6 },
+    textoBoton: { color: paleta.textoInvertido, fontSize: 14, fontWeight: "700" },
+    precioActual: { color: paleta.verdeGrisaceo, fontSize: 12, marginTop: 7 },
+    centro: {
+      alignItems: "center",
+      flex: 1,
+      justifyContent: "center",
+      padding: 24,
+      gap: 12,
+    },
+    textoSecundario: {
+      color: paleta.verdeGrisaceo,
+      fontSize: 15,
+      textAlign: "center",
+    },
+    error: { color: paleta.errorTexto, fontSize: 15, textAlign: "center" },
+    botonReintentar: {
+      backgroundColor: paleta.verdeBoton,
+      borderRadius: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 11,
+    },
+  });
