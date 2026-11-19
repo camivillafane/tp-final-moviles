@@ -204,7 +204,6 @@ async function obtenerEspacioBase(
   try {
     const espacio = await getUno<Espacio>(`/espacios/${id}`);
 
-    // Actualizamos también el espacio individual dentro del catálogo local.
     try {
       const espacios = (await obtenerEspaciosGuardados()) ?? [];
       const indice = espacios.findIndex((item) => item.id === id);

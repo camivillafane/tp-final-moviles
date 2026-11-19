@@ -1,5 +1,3 @@
-// Relaciona los espacios de exploración local con sus equivalentes reales en la API.
-// Los espacios sin correspondencia siguen usando disponibilidad mock.
 export const idsApiPorEspacioMock: Record<string, string> = {
   "espacio-01": "esp-01",
   "espacio-02": "esp-02",

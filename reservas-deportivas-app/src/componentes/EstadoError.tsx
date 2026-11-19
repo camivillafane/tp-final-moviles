@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, type Edges } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
 import { usePaleta } from "@/contextos/Tema";
 import type { Paleta } from "@/constantes/colores";
@@ -8,17 +8,19 @@ import type { Paleta } from "@/constantes/colores";
 interface EstadoErrorProps {
   mensaje?: string;
   onReintentar?: () => void;
+  edges?: Edges;
 }
 
 export function EstadoError({
   mensaje = "No se pudieron cargar los datos.",
   onReintentar,
+  edges = ["top", "bottom"],
 }: EstadoErrorProps) {
   const paleta = usePaleta();
   const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
 
   return (
-    <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
+    <SafeAreaView style={estilos.contenedor} edges={edges}>
       <IonIcons name="alert-circle-outline" size={48} color={paleta.magentaPrincipal} />
       <Text style={estilos.mensaje}>{mensaje}</Text>
       {onReintentar && (

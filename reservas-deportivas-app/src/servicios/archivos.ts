@@ -38,7 +38,6 @@ function mimePorExtension(nombre: string): string {
   }
 }
 
-/** Usa el tamaño informado por la galería o, si falta, el del archivo local. */
 export function tamanoDeArchivo(
   uri: string,
   tamanoReportado?: number | null
@@ -54,7 +53,6 @@ export function tamanoDeArchivo(
   }
 }
 
-/** Devuelve un mensaje de error si el archivo no cumple el formato o el peso. */
 export function validarArchivoSeleccionado(
   archivo: ArchivoSeleccionado,
   tipo: TipoArchivoSeleccionado
@@ -77,10 +75,6 @@ export function validarArchivoSeleccionado(
   return null;
 }
 
-/**
- * Sube un archivo a POST /archivos con el campo `archivo`.
- * El cliente compartido agrega "Authorization: Bearer <token>".
- */
 export function subirArchivo(
   archivo: ArchivoSeleccionado
 ): Promise<ArchivoSubido> {

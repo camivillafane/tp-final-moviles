@@ -7,7 +7,6 @@ import type { Reserva } from "@/tipos/reserva";
 export const CANAL_NOTIFICACIONES_RESERVAS = "reservas-deportivas";
 
 function seEjecutaEnExpoGo(): boolean {
-  // En Expo Go y development clients usamos el canal de respaldo de Android.
   return Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 }
 
@@ -37,8 +36,6 @@ async function configurarCanalAndroid(): Promise<boolean> {
     });
     return true;
   } catch (error) {
-    // Algunos clientes Expo Go no exponen el administrador nativo de canales.
-    // En ese caso se usa el canal de respaldo de Android y se permiten notificaciones locales.
     console.warn("No se pudo configurar el canal propio; se usará el canal de respaldo.", error);
     return false;
   }
@@ -115,7 +112,6 @@ export async function programarRecordatorioReserva(
   const fechaRecordatorio = new Date(
     inicio.getTime() - (opciones?.anticipacionMs ?? ANTICIPACION_RECORDATORIO_MS)
   );
-  // Si faltan menos de dos horas, se omite el aviso en vez de enviarlo tarde.
   if (fechaRecordatorio.getTime() <= Date.now()) return null;
 
   await cancelarRecordatorioReserva(reserva.id);
@@ -143,7 +139,6 @@ export async function cancelarRecordatorioReserva(reservaId: string): Promise<vo
       )
     );
   } catch (error) {
-    // Una falla de notificaciones nunca debe hacer parecer fallida una cancelación de reserva.
     console.warn("No se pudo quitar el recordatorio local de la reserva.", error);
   }
 }
