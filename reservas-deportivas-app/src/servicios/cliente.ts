@@ -15,6 +15,10 @@ const http=axios.create({
   headers:SIMULAR ? {"X-Simular": SIMULAR} : {},
 });
 
+if (__DEV__) {
+  console.log("Base URL de la API:", URL_API ?? "NO CONFIGURADA");
+}
+
 http.interceptors.request.use(async (config) => {
   const token = await recuperarToken();
 
@@ -29,6 +33,7 @@ function traducir(error: unknown): ErrorServicio {
   if (error instanceof ErrorServicio) return error;
 
   if (axios.isAxiosError(error)) {
+    
     const cuerpo = error.response?.data;
 
     if (cuerpo && typeof cuerpo === "object" && "error" in cuerpo) {
@@ -91,6 +96,23 @@ export async function postLista<T>(
   try {
     const { data } = await http.post<RespuestaLista<T>>(url, cuerpo);
     return data;
+  } catch (error) {
+    throw traducir(error);
+  }
+}
+
+// Para subir archivos (multipart/form-data) sin que el timeout corto
+// interrumpa transferencias grandes, como un video de hasta 30 MB.
+// La cabecera "Authorization: Bearer <token>" la agrega el interceptor.
+export async function postFormulario<T>(
+  url: string,
+  formulario: FormData
+): Promise<T> {
+  try {
+    const { data } = await http.post<RespuestaUno<T>>(url, formulario, {
+      timeout: 120000,
+    });
+    return data.datos;
   } catch (error) {
     throw traducir(error);
   }

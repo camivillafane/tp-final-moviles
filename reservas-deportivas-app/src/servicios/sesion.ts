@@ -30,6 +30,18 @@ export async function recuperarTokenBiometrico(): Promise<string | null> {
     return SecureStore.getItemAsync(CLAVE_TOKEN_BIOMETRICO);
 }
 
+export async function estaBiometriaActiva(): Promise<boolean> {
+    return (await SecureStore.getItemAsync(CLAVE_BIOMETRIA_ACTIVA)) === "true";
+}
+
+export async function eliminarCredencialesBiometricas(): Promise<void> {
+    await Promise.all([
+        SecureStore.deleteItemAsync(CLAVE_TOKEN_BIOMETRICO),
+        SecureStore.deleteItemAsync(CLAVE_BIOMETRIA_ACTIVA),
+        SecureStore.deleteItemAsync(CLAVE_USUARIO_BIOMETRICO),
+    ]);
+}
+
 export async function actualizarCredencialesBiometricas(
     token: string,
     usuario: Usuario

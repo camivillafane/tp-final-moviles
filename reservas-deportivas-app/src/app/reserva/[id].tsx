@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,17 +10,35 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
 import { obtenerDetalleReserva } from "@/servicios/reservas";
 import { getEspacioById } from "@/servicios/espacios";
 import type { Reserva } from "@/tipos/reserva";
 import type { Espacio } from "@/tipos/espacio";
 
+function formatearFechaHoraArgentina(fechaHora: string): string {
+  const fecha = new Date(fechaHora);
+  if (!Number.isFinite(fecha.getTime())) return fechaHora;
+
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(fecha);
+}
+
 export default function DetalleReservaPantalla() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { usuario } = useSesion();
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
 
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [espacio, setEspacio] = useState<Espacio | null>(null);
@@ -71,13 +89,13 @@ export default function DetalleReservaPantalla() {
           accessibilityRole="button"
           accessibilityLabel="Volver atrás"
         >
-          <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
+          <IonIcons name="arrow-back" size={26} color={paleta.verdePrincipal} />
         </Pressable>
 
         <Text style={estilos.titulo}>Detalle de reserva</Text>
 
         {cargando ? (
-          <ActivityIndicator size="large" color="#2E7D32" />
+          <ActivityIndicator size="large" color={paleta.verdePrincipal} />
         ) : error || !reserva ? (
           <Text style={estilos.mensaje}>{error || "No se encontró la reserva."}</Text>
         ) : (
@@ -92,6 +110,11 @@ export default function DetalleReservaPantalla() {
                 Espacio: {espacio?.nombre ?? reserva.espacioId}
             </Text>
             <Text style={estilos.dato}>Fecha: {reserva.fecha}</Text>
+            {reserva.cancelableHasta && reserva.estado === "confirmada" && (
+              <Text style={estilos.dato}>
+                Podés cancelar online hasta: {formatearFechaHoraArgentina(reserva.cancelableHasta)}
+              </Text>
+            )}
             <Text style={estilos.dato}>
               Horario: {reserva.inicio} a {reserva.fin} hs
             </Text>
@@ -111,36 +134,39 @@ export default function DetalleReservaPantalla() {
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: "#F8F9FA" },
-  contenido: { padding: 20 },
-  volver: { color: "#2E7D32", fontSize: 16, marginBottom: 20 },
-  botonVolver: { marginBottom: 20 },
-  titulo: {
-    color: "#1A1A1A",
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  tarjeta: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    elevation: 2,
-    padding: 18,
-  },
-  nombre: {
-    color: "#1A1A1A",
-    fontSize: 17,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  estado: { color: "#2E7D32", fontWeight: "600", marginBottom: 14 },
-  dato: { color: "#555555", fontSize: 15, marginBottom: 10 },
-  total: {
-    color: "#2E7D32",
-    fontSize: 17,
-    fontWeight: "bold",
-    marginTop: 6,
-  },
-  mensaje: { color: "#666666", fontSize: 16, marginTop: 20 },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: { flex: 1, backgroundColor: paleta.fondo },
+    contenido: { padding: 20 },
+    volver: { color: paleta.verdePrincipal, fontSize: 16, marginBottom: 20 },
+    botonVolver: { marginBottom: 20 },
+    titulo: {
+      color: paleta.textoOscuro,
+      fontSize: 22,
+      fontWeight: "bold",
+      marginBottom: 20,
+    },
+    tarjeta: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 12,
+      elevation: 2,
+      padding: 18,
+    },
+    nombre: {
+      color: paleta.textoOscuro,
+      fontSize: 17,
+      fontWeight: "bold",
+      marginBottom: 10,
+    },
+    estado: { color: paleta.verdePrincipal, fontWeight: "600", marginBottom: 14 },
+    dato: { color: paleta.verdeGrisaceo, fontSize: 15, marginBottom: 10 },
+    total: {
+      color: paleta.verdePrincipal,
+      fontSize: 17,
+      fontWeight: "bold",
+      marginTop: 6,
+    },
+    mensaje: { color: paleta.verdeGrisaceo, fontSize: 16, marginTop: 20 },
+  });

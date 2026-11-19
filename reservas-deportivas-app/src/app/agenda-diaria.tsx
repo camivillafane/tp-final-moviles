@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   ActivityIndicator,
@@ -13,9 +13,12 @@ import IonIcons from "@react-native-vector-icons/ionicons";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import { useSesion } from "@/contextos/Sesion";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { obtenerAgenda, type DatosAgenda } from "@/servicios/agenda";
+import { cancelarReserva } from "@/servicios/reservas";
 import { cancelarReservaLocal } from "@/servicios/dbServicios";
+import { cancelarRecordatorioReserva } from "@/servicios/notificacionesLocales";
 import type { Turno } from "@/tipos/turno";
 
 const fechaLocal = (fecha: Date) => {
@@ -49,11 +52,19 @@ const etiquetaEstado = (turno: Turno) => {
 export default function AgendaDiariaPantalla() {
   const router = useRouter();
   const { usuario, cargando } = useSesion();
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
   const [fecha, setFecha] = useState(() => fechaLocal(new Date()));
   const [datos, setDatos] = useState<DatosAgenda | null>(null);
   const [cargandoAgenda, setCargandoAgenda] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ahora, setAhora] = useState(() => new Date());
   const consultaActual = useRef(0);
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 30_000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   const cargar = useCallback(async () => {
     const idConsulta = ++consultaActual.current;
@@ -105,7 +116,35 @@ export default function AgendaDiariaPantalla() {
           onPress: async () => {
             try {
               await cancelarReservaLocal(reservaId, usuarioId);
+              await cancelarRecordatorioReserva(reservaId);
               await cargar();
+            } catch (fallo) {
+              Alert.alert(
+                "No se pudo cancelar",
+                fallo instanceof Error ? fallo.message : "Intentá nuevamente."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const confirmarCancelacionApi = (reservaId: string) => {
+    Alert.alert(
+      "Cancelar reserva",
+      "La cancelación se procesará en el servidor. Si es tardía, se actualizará el contador del jugador.",
+      [
+        { text: "Volver", style: "cancel" },
+        {
+          text: "Cancelar reserva",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (!usuario) return;
+              await cancelarReserva(reservaId, usuario.id);
+              await cargar();
+              Alert.alert("Reserva cancelada", "La agenda se actualizó correctamente.");
             } catch (fallo) {
               Alert.alert(
                 "No se pudo cancelar",
@@ -135,11 +174,11 @@ export default function AgendaDiariaPantalla() {
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <View style={estilos.encabezado}>
         <Pressable onPress={() => router.back()} accessibilityRole="button">
-          <IonIcons name="arrow-back" size={24} color={colores.verdePrincipal} />
+          <IonIcons name="arrow-back" size={24} color={paleta.verdePrincipal} />
         </Pressable>
         <Text style={estilos.titulo}>Agenda diaria</Text>
         <Pressable onPress={cargar} accessibilityRole="button" accessibilityLabel="Actualizar agenda">
-          <IonIcons name="refresh-outline" size={23} color={colores.verdePrincipal} />
+          <IonIcons name="refresh-outline" size={23} color={paleta.verdePrincipal} />
         </Pressable>
       </View>
 
@@ -150,7 +189,7 @@ export default function AgendaDiariaPantalla() {
           accessibilityRole="button"
           accessibilityLabel="Día anterior"
         >
-          <IonIcons name="chevron-back" size={20} color={colores.verdePrincipal} />
+          <IonIcons name="chevron-back" size={20} color={paleta.verdePrincipal} />
         </Pressable>
         <View style={estilos.fechaCentro}>
           <Text style={estilos.fechaTexto}>{fechaLegible(fecha)}</Text>
@@ -166,13 +205,13 @@ export default function AgendaDiariaPantalla() {
           accessibilityRole="button"
           accessibilityLabel="Día siguiente"
         >
-          <IonIcons name="chevron-forward" size={20} color={colores.verdePrincipal} />
+          <IonIcons name="chevron-forward" size={20} color={paleta.verdePrincipal} />
         </Pressable>
       </View>
 
       {cargandoAgenda ? (
         <View style={estilos.centro}>
-          <ActivityIndicator color={colores.verdePrincipal} size="large" />
+          <ActivityIndicator color={paleta.verdePrincipal} size="large" />
           <Text style={estilos.textoSecundario}>Cargando agenda...</Text>
         </View>
       ) : error ? (
@@ -206,13 +245,20 @@ export default function AgendaDiariaPantalla() {
                   const reserva = turno.reservaId
                     ? reservasPorId.get(turno.reservaId)
                     : undefined;
+                  const esPasado = terminoTurno(fecha, turno.fin, ahora);
                   return (
-                    <View key={turno.id} style={[estilos.tarjetaTurno, turno.estado === "mantenimiento" && estilos.tarjetaBloqueada]}>
+                    <View key={turno.id} style={[
+                      estilos.tarjetaTurno,
+                      turno.estado === "mantenimiento" && estilos.tarjetaBloqueada,
+                      esPasado && estilos.tarjetaPasada,
+                    ]}>
                       <Text style={estilos.horario}>
                         {turno.inicio} – {turno.fin}
                       </Text>
-                      <View style={[estilos.estado, estiloEstado(turno.estado)]}>
-                        <Text style={estilos.textoEstado}>{etiquetaEstado(turno)}</Text>
+                      <View style={[estilos.estado, estiloEstado(turno.estado, estilos), esPasado && estilos.estadoPasado]}>
+                        <Text style={estilos.textoEstado}>
+                          {esPasado ? `Pasado · ${etiquetaEstado(turno)}` : etiquetaEstado(turno)}
+                        </Text>
                       </View>
                       {turno.estado === "mantenimiento" && turno.motivoBloqueo && (
                         <Text style={estilos.motivoBloqueo}>Motivo: {turno.motivoBloqueo}</Text>
@@ -233,6 +279,14 @@ export default function AgendaDiariaPantalla() {
                               <Text style={estilos.textoCancelarLocal}>Cancelar reserva local</Text>
                             </Pressable>
                           )}
+                          {reserva.origen === "api" && reserva.estado === "confirmada" && (
+                            <Pressable
+                              style={estilos.botonCancelarLocal}
+                              onPress={() => confirmarCancelacionApi(reserva.id)}
+                            >
+                              <Text style={estilos.textoCancelarLocal}>Cancelar reserva</Text>
+                            </Pressable>
+                          )}
                         </>
                       )}
                     </View>
@@ -248,6 +302,9 @@ export default function AgendaDiariaPantalla() {
 }
 
 function VistaMensaje({ mensaje, volver }: { mensaje: string; volver?: () => void }) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+
   return (
     <SafeAreaView style={estilos.contenedor} edges={["top", "bottom"]}>
       <View style={estilos.centro}>
@@ -262,69 +319,159 @@ function VistaMensaje({ mensaje, volver }: { mensaje: string; volver?: () => voi
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: colores.fondo },
-  encabezado: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-  },
-  titulo: { color: colores.textoOscuro, fontSize: 21, fontWeight: "700" },
-  selectorFecha: {
-    alignItems: "center",
-    backgroundColor: colores.blanco,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginHorizontal: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  botonFecha: { padding: 6 },
-  fechaCentro: { alignItems: "center", flex: 1 },
-  fechaTexto: { color: colores.textoOscuro, fontSize: 15, fontWeight: "600", textTransform: "capitalize" },
-  volverHoy: { color: colores.verdePrincipal, fontSize: 13, fontWeight: "600", marginTop: 4 },
-  lista: { padding: 16, paddingBottom: 32 },
-  resumen: { color: colores.verdeGrisaceo, fontSize: 13, marginBottom: 12 },
-  grupoEspacio: {
-    backgroundColor: colores.blanco,
-    borderRadius: 14,
-    marginBottom: 14,
-    padding: 14,
-  },
-  nombreEspacio: { color: colores.textoOscuro, fontSize: 17, fontWeight: "700" },
-  complejo: { color: colores.verdeGrisaceo, fontSize: 13, marginTop: 3, marginBottom: 8 },
-  tarjetaTurno: {
-    alignItems: "center",
-    borderTopColor: colores.borde,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingVertical: 10,
-  },
-  tarjetaBloqueada: { backgroundColor: "#fff0f0", borderRadius: 8, paddingHorizontal: 7 },
-  horario: { color: colores.textoOscuro, fontSize: 14, fontWeight: "600", minWidth: 98 },
-  estado: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
-  estado_libre: { backgroundColor: "#e5f2e8" },
-  estado_reservado: { backgroundColor: "#f3e1e1" },
-  estado_fijo: { backgroundColor: "#eee5f2" },
-  estado_mantenimiento: { backgroundColor: "#f8d7da" },
-  textoEstado: { color: colores.textoOscuro, fontSize: 12, fontWeight: "600" },
-  motivoBloqueo: { color: colores.verdeGrisaceo, flexBasis: "100%", fontSize: 12 },
-  detalleReserva: { color: colores.verdeGrisaceo, flexBasis: "100%", fontSize: 12 },
-  botonCancelarLocal: { alignSelf: "flex-start", borderColor: "#c62828", borderRadius: 8, borderWidth: 1, marginTop: 4, paddingHorizontal: 10, paddingVertical: 6 },
-  textoCancelarLocal: { color: "#c62828", fontSize: 12, fontWeight: "600" },
-  centro: { alignItems: "center", flex: 1, justifyContent: "center", padding: 24, gap: 12 },
-  textoSecundario: { color: colores.verdeGrisaceo, fontSize: 15, textAlign: "center" },
-  error: { color: "#9b2c2c", fontSize: 15, textAlign: "center" },
-  botonReintentar: { backgroundColor: colores.verdePrincipal, borderRadius: 8, paddingHorizontal: 18, paddingVertical: 11 },
-  textoBoton: { color: colores.blanco, fontSize: 14, fontWeight: "700" },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    contenedor: { flex: 1, backgroundColor: paleta.fondo },
+    encabezado: {
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 18,
+      paddingVertical: 14,
+    },
+    titulo: { color: paleta.textoOscuro, fontSize: 21, fontWeight: "700" },
+    selectorFecha: {
+      alignItems: "center",
+      backgroundColor: paleta.superficie,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginHorizontal: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    botonFecha: { padding: 6 },
+    fechaCentro: { alignItems: "center", flex: 1 },
+    fechaTexto: {
+      color: paleta.textoOscuro,
+      fontSize: 15,
+      fontWeight: "600",
+      textTransform: "capitalize",
+    },
+    volverHoy: {
+      color: paleta.verdePrincipal,
+      fontSize: 13,
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    lista: { padding: 16, paddingBottom: 32 },
+    resumen: { color: paleta.verdeGrisaceo, fontSize: 13, marginBottom: 12 },
+    grupoEspacio: {
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.bordeSuave,
+      borderWidth: 1,
+      borderRadius: 14,
+      marginBottom: 14,
+      padding: 14,
+    },
+    nombreEspacio: {
+      color: paleta.textoOscuro,
+      fontSize: 17,
+      fontWeight: "700",
+    },
+    complejo: {
+      color: paleta.verdeGrisaceo,
+      fontSize: 13,
+      marginTop: 3,
+      marginBottom: 8,
+    },
+    tarjetaTurno: {
+      alignItems: "center",
+      borderTopColor: paleta.bordeSuave,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      paddingVertical: 10,
+    },
+    tarjetaBloqueada: {
+      backgroundColor: paleta.errorFondo,
+      borderRadius: 8,
+      paddingHorizontal: 7,
+    },
+    tarjetaPasada: {
+      backgroundColor: paleta.estadoPasadoFondo,
+      borderRadius: 8,
+      paddingHorizontal: 7,
+    },
+    horario: {
+      color: paleta.textoOscuro,
+      fontSize: 14,
+      fontWeight: "600",
+      minWidth: 98,
+    },
+    estado: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
+    estado_libre: { backgroundColor: paleta.exitoFondo },
+    estado_reservado: { backgroundColor: paleta.badgeInactivoFondo },
+    estado_fijo: { backgroundColor: paleta.estadoFijoFondo },
+    estado_mantenimiento: { backgroundColor: paleta.errorFondo },
+    estadoPasado: { backgroundColor: paleta.estadoPasadoFondo },
+    textoEstado: {
+      color: paleta.textoOscuro,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    motivoBloqueo: {
+      color: paleta.verdeGrisaceo,
+      flexBasis: "100%",
+      fontSize: 12,
+    },
+    detalleReserva: {
+      color: paleta.verdeGrisaceo,
+      flexBasis: "100%",
+      fontSize: 12,
+    },
+    botonCancelarLocal: {
+      alignSelf: "flex-start",
+      borderColor: paleta.errorTexto,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginTop: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    textoCancelarLocal: {
+      color: paleta.errorTexto,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    centro: {
+      alignItems: "center",
+      flex: 1,
+      justifyContent: "center",
+      padding: 24,
+      gap: 12,
+    },
+    textoSecundario: {
+      color: paleta.verdeGrisaceo,
+      fontSize: 15,
+      textAlign: "center",
+    },
+    error: { color: paleta.errorTexto, fontSize: 15, textAlign: "center" },
+    botonReintentar: {
+      backgroundColor: paleta.verdeBoton,
+      borderRadius: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 11,
+    },
+    textoBoton: {
+      color: paleta.textoInvertido,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+  });
 
-function estiloEstado(estado: Turno["estado"]) {
+function terminoTurno(fecha: string, horaFin: string, ahora: Date): boolean {
+  const [anio, mes, dia] = fecha.split("-").map(Number);
+  const [hora, minuto] = horaFin.split(":").map(Number);
+  if (![anio, mes, dia, hora, minuto].every(Number.isFinite)) return false;
+  return new Date(anio, mes - 1, dia, hora, minuto).getTime() <= ahora.getTime();
+}
+
+function estiloEstado(
+  estado: Turno["estado"],
+  estilos: ReturnType<typeof crearEstilos>
+) {
   switch (estado) {
     case "libre":
       return estilos.estado_libre;

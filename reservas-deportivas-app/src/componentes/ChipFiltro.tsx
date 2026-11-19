@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 
 interface ChipFiltroProps {
   etiqueta: string;
@@ -12,20 +14,26 @@ export function ChipFiltro({
   etiqueta,
   seleccionado,
   onPress,
-  color = colores.verdePrincipal,
+  color,
 }: ChipFiltroProps) {
+  const paleta = usePaleta();
+  const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
+  const colorActivo = color ?? paleta.verdeBoton;
+
   return (
     <Pressable
       style={[
         estilos.chip,
-        seleccionado && { backgroundColor: color, borderColor: color },
+        seleccionado && { backgroundColor: colorActivo, borderColor: colorActivo },
       ]}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: seleccionado }}
     >
       <Text
         style={[
           estilos.texto,
-          seleccionado && { color: colores.blanco },
+          seleccionado && { color: paleta.textoInvertido },
         ]}
         numberOfLines={1}
         ellipsizeMode="tail"
@@ -36,24 +44,25 @@ export function ChipFiltro({
   );
 }
 
-const estilos = StyleSheet.create({
-  chip: {
-    alignItems: "center",
-    backgroundColor: colores.blanco,
-    borderColor: colores.borde,
-    borderRadius: 20,
-    borderWidth: 1,
-    justifyContent: "center",
-    marginRight: 8,
-    maxWidth: 150,
-    minWidth: 88,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  texto: {
-    color: colores.verdePrincipal,
-    fontSize: 14,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-});
+const crearEstilos = (paleta: Paleta) =>
+  StyleSheet.create({
+    chip: {
+      alignItems: "center",
+      backgroundColor: paleta.superficie,
+      borderColor: paleta.borde,
+      borderRadius: 20,
+      borderWidth: 1,
+      justifyContent: "center",
+      marginRight: 8,
+      maxWidth: 150,
+      minWidth: 88,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    texto: {
+      color: paleta.verdePrincipal,
+      fontSize: 14,
+      fontWeight: "500",
+      textAlign: "center",
+    },
+  });

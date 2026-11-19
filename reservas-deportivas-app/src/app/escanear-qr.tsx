@@ -1,11 +1,12 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { SafeAreaView } from "react-native-safe-area-context";
 import IonIcons from "@react-native-vector-icons/ionicons";
-import { colores } from "@/constantes/colores";
+import { usePaleta } from "@/contextos/Tema";
+import type { Paleta } from "@/constantes/colores";
 import { useSesion } from "@/contextos/Sesion";
 import { obtenerReservaPorQrToken, obtenerNombreUsuario } from "@/servicios/dbServicios";
 import { listarEspacios } from "@/servicios/espacios";
@@ -15,6 +16,8 @@ import { registrarIngreso } from "@/servicios/ingresos";
 export default function EscanearQrPantalla() {
 const router = useRouter();
 const { usuario, cargando } = useSesion();
+const paleta = usePaleta();
+const estilos = useMemo(() => crearEstilos(paleta), [paleta]);
 const [permiso, solicitarPermiso] = useCameraPermissions();
 const [qrLeido, setQrLeido] = useState(false);
 const [resultado, setResultado] = useState("");
@@ -86,7 +89,7 @@ if (!permiso.granted) {
         accessibilityRole="button"
         accessibilityLabel="Volver atrás"
     >
-        <IonIcons name="arrow-back" size={26} color={colores.verdePrincipal} />
+        <IonIcons name="arrow-back" size={26} color={paleta.verdePrincipal} />
     </Pressable>
 
     <Text style={estilos.titulo}>Escanear QR</Text>
@@ -258,116 +261,117 @@ if (!permiso.granted) {
     );
 }
 
-const estilos = StyleSheet.create({
-    contenido: {
-        paddingBottom: 30,
-    },
-    tarjetaIngreso: {
-        backgroundColor: "#EAF5EE",
-        borderWidth: 2,
-        borderColor: "#287A55",
-        borderRadius: 16,
-        padding: 20,
-        marginTop: 24,
-        gap: 12,
-    },
-    tituloTarjeta: {
-        fontSize: 22,
-        fontWeight: "bold",
-        color: "#173D2B",
-        textAlign: "center",
-        marginBottom: 8,
-    },
-    datoTarjeta: {
-        fontSize: 16,
-        color: "#333333",
-    },
-    estadoIngreso: {
-        backgroundColor: "#287A55",
-        color: "#FFFFFF",
-        fontSize: 16,
-        fontWeight: "bold",
-        textAlign: "center",
-        padding: 10,
-        borderRadius: 8,
-        overflow: "hidden",
-    },
-    contenedor: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-        padding: 20,
-    },
-    volver: {
-        fontSize: 18,
-        color: "#287A55",
-        marginBottom: 24,
-    },
-    botonVolver: {
-        marginBottom: 24,
-    },
-    titulo: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#173D2B",
-        textAlign: "center",
-    },
-    mensaje: {
-        fontSize: 16,
-        color: "#555555",
-        textAlign: "center",
-        marginVertical: 16,
-    },
-    marcoCamara: {
-        height: 320,
-        overflow: "hidden",
-        borderRadius: 16,
-        marginTop: 20,
-    },
-    pista: {
-        textAlign: "center",
-        marginTop: 20,
-        fontSize: 16,
-        color: "#287A55",
-    },
-    boton: {
-        backgroundColor: "#287A55",
-        padding: 14,
-        borderRadius: 10,
-        alignItems: "center",
-    },
-    botonTexto: {
-        color: "#FFFFFF",
-        fontWeight: "bold",
-        fontSize: 16,
-    },
-    botonSeleccionado: {
-        backgroundColor: "#173D2B",
-        borderWidth: 3,
-        borderColor: "#8BC9A5",
-    },
-    opcionEspacio: {
-        backgroundColor: "#F1F5F2",
-        padding: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: "#D5E2D9",
-    },
-    opcionTexto: {
-        color: "#173D2B",
-        fontSize: 15,
-    },
-    marcoEscaneo: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    esquina: {
-        position: "absolute",
-        width: 35,
-        height: 35,
-        borderColor: "#8BC9A5",
-    },
+const crearEstilos = (paleta: Paleta) =>
+    StyleSheet.create({
+        contenido: {
+            paddingBottom: 30,
+        },
+        tarjetaIngreso: {
+            backgroundColor: paleta.exitoFondo,
+            borderWidth: 2,
+            borderColor: paleta.verdePrincipal,
+            borderRadius: 16,
+            padding: 20,
+            marginTop: 24,
+            gap: 12,
+        },
+        tituloTarjeta: {
+            fontSize: 22,
+            fontWeight: "bold",
+            color: paleta.exitoTexto,
+            textAlign: "center",
+            marginBottom: 8,
+        },
+        datoTarjeta: {
+            fontSize: 16,
+            color: paleta.textoOscuro,
+        },
+        estadoIngreso: {
+            backgroundColor: paleta.verdeBoton,
+            color: paleta.textoInvertido,
+            fontSize: 16,
+            fontWeight: "bold",
+            textAlign: "center",
+            padding: 10,
+            borderRadius: 8,
+            overflow: "hidden",
+        },
+        contenedor: {
+            flex: 1,
+            backgroundColor: paleta.fondo,
+            padding: 20,
+        },
+        volver: {
+            fontSize: 18,
+            color: paleta.verdePrincipal,
+            marginBottom: 24,
+        },
+        botonVolver: {
+            marginBottom: 24,
+        },
+        titulo: {
+            fontSize: 24,
+            fontWeight: "bold",
+            color: paleta.textoOscuro,
+            textAlign: "center",
+        },
+        mensaje: {
+            fontSize: 16,
+            color: paleta.verdeGrisaceo,
+            textAlign: "center",
+            marginVertical: 16,
+        },
+        marcoCamara: {
+            height: 320,
+            overflow: "hidden",
+            borderRadius: 16,
+            marginTop: 20,
+        },
+        pista: {
+            textAlign: "center",
+            marginTop: 20,
+            fontSize: 16,
+            color: paleta.verdePrincipal,
+        },
+        boton: {
+            backgroundColor: paleta.verdeBoton,
+            padding: 14,
+            borderRadius: 10,
+            alignItems: "center",
+        },
+        botonTexto: {
+            color: paleta.textoInvertido,
+            fontWeight: "bold",
+            fontSize: 16,
+        },
+        botonSeleccionado: {
+            backgroundColor: paleta.verdeBoton,
+            borderWidth: 3,
+            borderColor: paleta.verdePrincipal,
+        },
+        opcionEspacio: {
+            backgroundColor: paleta.superficieAlt,
+            padding: 14,
+            borderBottomWidth: 1,
+            borderBottomColor: paleta.bordeSuave,
+        },
+        opcionTexto: {
+            color: paleta.textoOscuro,
+            fontSize: 15,
+        },
+        marcoEscaneo: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+        },
+        esquina: {
+            position: "absolute",
+            width: 35,
+            height: 35,
+            borderColor: paleta.verdePrincipal,
+        },
     esquinaSuperiorIzquierda: {
         top: 20,
         left: 20,

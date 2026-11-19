@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "reservasdeportivasapp",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -30,7 +30,11 @@
         {
           "backgroundColor": "#e9e9eb",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200
+          "imageWidth": 200,
+          "dark": {
+            "backgroundColor": "#0e1311",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
       "@react-native-vector-icons/ionicons",
@@ -45,7 +49,13 @@
       "expo-sqlite",
       "expo-secure-store",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La app usa tus fotos y videos para mostrarlos en la ficha de cada espacio."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
