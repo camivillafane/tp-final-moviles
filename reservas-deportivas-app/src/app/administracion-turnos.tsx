@@ -28,6 +28,9 @@ import {
   quitarBloqueo,
 } from "@/servicios/administracionTurnos";
 import { listarEspaciosAdministracion } from "@/servicios/administracionEspacios";
+import { obtenerTodasLasReservasLocales } from "@/servicios/dbServicios";
+import { programarNotificacionLocal } from "@/servicios/notificacionesLocales";
+import { notificarDisponibilidadEnFavorito } from "@/servicios/notificacionesDisponibilidad";
 import type { Bloqueo, ReservaFijaApi } from "@/tipos/api";
 import type { Espacio } from "@/tipos/espacio";
 
@@ -56,6 +59,10 @@ function horaValida(hora: string) {
 
 function horaDespues(fin: string, inicio: string) {
   return Number(fin.slice(0, 2)) > Number(inicio.slice(0, 2));
+}
+
+function horariosSeSuperponen(inicioA: string, finA: string, inicioB: string, finB: string) {
+  return inicioA < finB && finA > inicioB;
 }
 
 export default function AdministracionTurnosPantalla() {
@@ -131,9 +138,43 @@ export default function AdministracionTurnosPantalla() {
         ...(diaCompleto ? {} : { inicio: inicioBloqueo, fin: finBloqueo }),
         motivo: motivo.trim(),
       });
+
+      let cantidadAvisosProgramados = 0;
+      try {
+        const reservasLocales = await obtenerTodasLasReservasLocales();
+        const afectadas = reservasLocales.filter((reserva) =>
+          reserva.estado === "confirmada" &&
+          reserva.espacioId === espacioId &&
+          reserva.fecha === fechaBloqueo &&
+          (diaCompleto || horariosSeSuperponen(
+            reserva.inicio,
+            reserva.fin,
+            inicioBloqueo,
+            finBloqueo
+          ))
+        );
+        const nombreEspacio = espaciosPorId.get(espacioId) ?? "El espacio reservado";
+
+        for (const reserva of afectadas) {
+          const identificador = await programarNotificacionLocal({
+            titulo: "Tu reserva fue suspendida",
+            cuerpo: `${nombreEspacio}, ${fechaLegible(fechaBloqueo)}: ${motivo.trim()}`,
+            fecha: new Date(Date.now() + 2_000),
+            datos: { origen: "bloqueo-reserva", reservaId: reserva.id },
+          });
+          if (identificador) cantidadAvisosProgramados += 1;
+        }
+      } catch (error) {
+        // El bloqueo ya quedó creado en la API; una falla local de notificación no debe revertirlo.
+        console.warn("No se pudo notificar localmente a todas las reservas afectadas.", error);
+      }
+
       setMotivo("");
       await cargar();
-      Alert.alert("Bloqueo creado", "La agenda se actualizará con el bloqueo.");
+      const detalleAviso = cantidadAvisosProgramados > 0
+        ? ` Se programó un aviso local para ${cantidadAvisosProgramados} reserva${cantidadAvisosProgramados === 1 ? "" : "s"} guardada${cantidadAvisosProgramados === 1 ? "" : "s"} en este teléfono.`
+        : " No se encontraron reservas afectadas guardadas en este teléfono, o falta conceder el permiso de notificaciones.";
+      Alert.alert("Bloqueo creado", `La agenda se actualizará con el bloqueo.${detalleAviso}`);
     } catch (fallo) {
       Alert.alert("No se pudo crear el bloqueo", fallo instanceof Error ? fallo.message : "Intentá nuevamente.");
     } finally {
@@ -147,7 +188,21 @@ export default function AdministracionTurnosPantalla() {
     [
       { text: "Volver", style: "cancel" },
       { text: "Quitar", style: "destructive", onPress: () => void (async () => {
-        try { await quitarBloqueo(bloqueo.id); await cargar(); }
+        try {
+          await quitarBloqueo(bloqueo.id);
+          try {
+            await notificarDisponibilidadEnFavorito({
+              espacioId: bloqueo.espacioId,
+              fecha: bloqueo.fecha,
+              nombreEspacio: espaciosPorId.get(bloqueo.espacioId),
+              inicio: bloqueo.inicio,
+              fin: bloqueo.fin,
+            });
+          } catch (error) {
+            console.warn("Se quitó el bloqueo, pero no se pudo avisar a los favoritos.", error);
+          }
+          await cargar();
+        }
         catch (fallo) { Alert.alert("No se pudo quitar", fallo instanceof Error ? fallo.message : "Intentá nuevamente."); }
       })() },
     ]

@@ -11,6 +11,7 @@ import { USAR_MOCKS } from "@/servicios/config";
 import { getLista, getUno, post } from "@/servicios/cliente";
 import { ErrorServicio } from "@/servicios/errores";
 import { cancelarRecordatorioReserva } from "@/servicios/notificacionesLocales";
+import { notificarDisponibilidadEnFavorito } from "@/servicios/notificacionesDisponibilidad";
 import {
   contarReservasActivasLocales,
   guardarReservaLocal,
@@ -511,6 +512,16 @@ export async function cancelarReserva(
     );
     await guardarReservaLocal(reserva);
     await cancelarRecordatorioReserva(reservaId);
+    try {
+      await notificarDisponibilidadEnFavorito({
+        espacioId: reserva.espacioId,
+        fecha: reserva.fecha,
+        inicio: reserva.inicio,
+        fin: reserva.fin,
+      });
+    } catch (error) {
+      console.warn("La reserva se canceló, pero no se pudo avisar a los favoritos.", error);
+    }
     return reserva;
   }
 
@@ -518,5 +529,15 @@ export async function cancelarReserva(
   const reserva = await obtenerReservaLocal(reservaId, usuarioId);
   if (!reserva) throw new Error("No se encontró la reserva especificada.");
   await cancelarRecordatorioReserva(reservaId);
+  try {
+    await notificarDisponibilidadEnFavorito({
+      espacioId: reserva.espacioId,
+      fecha: reserva.fecha,
+      inicio: reserva.inicio,
+      fin: reserva.fin,
+    });
+  } catch (error) {
+    console.warn("La reserva local se canceló, pero no se pudo avisar a los favoritos.", error);
+  }
   return reserva;
 };

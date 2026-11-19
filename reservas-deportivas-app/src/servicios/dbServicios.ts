@@ -83,6 +83,19 @@ export const obtenerFavoritosLocales = async (
   return filas.map((fila) => fila.espacioId);
 };
 
+export const obtenerUsuariosQueMarcaronFavoritoLocal = async (
+  espacioId: string
+): Promise<string[]> => {
+  const db = await abrirBaseDeDatos();
+  const filas = await db.getAllAsync<{ usuarioId: string }>(
+    `SELECT usuarioId
+     FROM favoritos_usuario_locales
+     WHERE espacioId = ?;`,
+    [espacioId]
+  );
+  return filas.map((fila) => fila.usuarioId);
+};
+
 export const guardarFavoritoLocal = async (
   usuarioId: string,
   espacioId: string
